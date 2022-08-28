@@ -1,0 +1,5 @@
+"GdScintillator"   ! File name         
+2318.0              ! Velocity
+"#" "Material" "Thickness (cm)" "From-to in radial (cm)" "# Density" "V (neV)" "W_th (neV)" "W_sc (neV)" "W_abs (neV)" "Σ_abs (1/cm)" "Σ_el (1/cm)" "El. scatt. length (cm)"
+"GC Scintillator" 36.9 "1027.25 – 1064.15" 2.546E+021 -3.385E+00 2.009E-01 2.002E-01 7.491E-04 0.000E+00 0.0 0.0
+"Gd-doped Scintillator" 36.9 "1069.55 – 1106.45" 2.548E+021 7.195E+00 3.596E+00 5.292E-01 3.067E+00 0.000E+00 0.0 0.0

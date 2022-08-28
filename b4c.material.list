@@ -1,0 +1,4 @@
+"B4C"  ! Desired file name
+2318.0  ! Velocity
+"Material"      "Thickness (cm)"    "From→to in radial (cm)"    "# Density"     "V (neV)"   "W_th (neV)"    "W_sc (neV)"    "W_abs (neV)"   "Σ_abs (1/cm)"  "Σ_el (1/cm)"   "El. scatt. length (cm)"
+"B4C covering"  0.8                 "1000.2–1001"               1.373E+023      200.357     6.150           5.27E-04        6.100           8.427E+01       7.282E-01       1.373
