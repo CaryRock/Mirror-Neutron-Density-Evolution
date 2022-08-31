@@ -6,22 +6,25 @@
 ! Much of this can probably be ripped from f90test.f95
 module get_parameters
 contains
-    subroutine get_params(INFILE_1, mass, angle)
+    subroutine get_params(INFILE_1, mass, angle, psi)
         use f90getopt
         implicit none
         
         character(128), intent(in)  :: INFILE_1
         character(256)              :: loc
         real(8)                     :: mass, angle
-        logical                     :: i_opt, m_opt, t_opt
+        complex(8), dimension(2)    :: psi
+        logical                     :: i_opt, m_opt, t_opt, N_opt, MN_opt
         
         ! Will 
-        type(option_s)  :: opts(5)
+        type(option_s)  :: opts(7)
         opts(1) = option_s("help",      .false.,    "h")
         opts(2) = option_s("version",   .false.,    "v")
         opts(3) = option_s("mass",      .true. ,    "m")
         opts(4) = option_s("theta",     .true. ,    "t")
         opts(5) = option_s("input_file",.true. ,    "i")
+        opts(6) = option_s("initial_n", .true. ,    "N")
+        opts(7) = option_s("initial_np",.true. ,    "M")
 
         if(command_argument_count() .eq. 0) then
             print *, "WARNING: No options entered. Assuming '-i'."
@@ -31,9 +34,11 @@ contains
         i_opt = .false.
         m_opt = .false.
         t_opt = .false.
-        
+        N_opt = .false.
+        MN_opt = .false.
+
         do
-            select case(getopt("i:m:t:hv", opts))
+            select case(getopt("i:NMm:t:hv", opts))
                 case(char(0))
                     exit
                 case("i")   ! option -i --input-file
@@ -68,6 +73,14 @@ contains
                         print *, "ERROR: Option -t or --theta: not a number"
                         stop
                     end if
+                case("N")
+                    N_opt   = .true.  ! Conflicts with option M
+                    psi(1)  = cmplx(1.0, 0.0)
+                    psi(2)  = cmplx(0.0, 0.0)
+                case("M")
+                    MN_opt  = .true.  ! Conflicts with option N
+                    psi(1)  = cmplx(0.0, 0.0)
+                    psi(2)  = cmplx(1.0, 0.0)
                 case("h")   ! help output
                     write(*, '(6(A/),/,4(A/))')&
                         "Usage: test.exe [options] ...",&
@@ -94,6 +107,7 @@ contains
     !    else if (t_opt .and. .not. m_opt) then
     !        print *, "Using -t/--theta requires using -m/--mass and not using &
     !            &-i/--input-file"
+            stop
         else if (i_opt .and. m_opt .or. i_opt .and. i_opt) then
             print *, "Using -i/--input-file disallows using -m/--mass and &
                 &-t/--theta."
@@ -103,6 +117,17 @@ contains
                 &available options for this program."
             stop
         end if
-    
+        
+        if (N_opt .and. MN_opt) then
+            print *, "Please specify the initial starting state as being either &
+            &purely neutron ('N') or purely mirror neutron ('M'). It makes no &
+            &sense to be both." 
+            stop
+        else if (.not. N_opt .and. .not. MN_opt) then
+            ! Just default to starting as neutron. Figure out specifying 
+            ! starting angle later.
+            psi(1)  = cmplx(1.0, 0.0)
+            psi(2)  = cmplx(0.0, 0.0)
+        end if
     end subroutine get_params
 end module get_parameters

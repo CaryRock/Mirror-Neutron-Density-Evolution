@@ -31,14 +31,14 @@ program stereo_sim
     !integer                             :: N            
         ! Number of neutron collisions
     real(8)                             :: Dm, vel, theta0, Vopt, W1, W2, thick
-    real(8)                             :: A, B, tStep, ang
+    real(8)                             :: A, B, tStep, ang, x
     !complex(8)                          :: i
     real(8),        dimension(2, 2)     :: rho  ! rho is the density matrix
     complex(8),     dimension(2)        :: psi  ! initial n-n' state, e.g.,(1,0)
     !character(80),  dimension(3)        :: arg_in
     
     character(prec), dimension(2, 2)    :: rhonn
-    character(prec)                     :: uni, dist, thetaChar, massChar
+    character(prec)                     :: uni, dist, thetaChar, massChar, xChar
     character(80)                       :: directoryName
     character(prec)                     :: DmChar, theta0char, thickness
     character(36)                       :: uuid
@@ -51,9 +51,11 @@ program stereo_sim
 ! === End variable declarations ================================================
 
 ! === Begin variable assignments ===============================================
-    numSteps = int(1e3)
+    numSteps    = int(1e3)
+    x           = 0.D0
 
     ! This is just for nice formatting
+    xChar           = "Global X"
     rhonn(1, 1)     = "pnn"
     rhonn(2, 1)     = "pmn"
     rhonn(1, 2)     = "pnm"
@@ -80,7 +82,7 @@ program stereo_sim
     INFILE_2 = "material.list"
 
     ! Check the command line for parameters
-    call get_params(INFILE_1, Dm, theta0)
+    call get_params(INFILE_1, Dm, theta0, psi)
 
     !print *, "Dm        :", Dm
     !print *, "theta0    :", theta0
@@ -110,8 +112,8 @@ program stereo_sim
             &status = "unknown")
     write(1, *) '#' // massChar, thetaChar
     write(1, '(2F16.11)') Dm, theta0
-    write(1, 56) '#' // dist, rhonn(1, 1), rhonn(2, 1), rhonn(1, 2), rhonn(2, 2)
-    write(1, 57) 0.0, rho(1, 1), rho(2, 1), rho(1, 2), rho(2, 2)
+    write(1, 56) '#' // xChar, dist, rhonn(1, 1), rhonn(2, 1), rhonn(1, 2), rhonn(2, 2)
+    write(1, 57) x, 0.0, rho(1, 1), rho(2, 1), rho(1, 2), rho(2, 2)
 
 ! === End initial file I/O =====================================================
 
@@ -128,7 +130,7 @@ program stereo_sim
         W1      = inventory(j)%Wsc * 1.D-9
         W2      = inventory(j)%Wth * 1.D-9
         thick   = inventory(j)%d / 100
-        vel     = 2200.0
+        vel     = 2318.0
         tStep   = thick / vel / numSteps
 
 !        print *, "Vopt      :", Vopt
@@ -145,13 +147,14 @@ program stereo_sim
         !psi(1)      = 1 - ang
         !psi(2)      = ang
 ! Generate (1, 0)
-        psi(1)      = cmplx(0.0, 0.0, 8)
-        psi(2)      = cmplx(1.0, 0.0, 8)
+        psi(1)      = cmplx(1.0, 0.0, 8)
+        psi(2)      = cmplx(0.0, 0.0, 8)
 
         do 200 k = 1, numSteps
             call exactBanfor(Dm, vel, theta0, Vopt, W1, W2, thick, A, B, k*tStep, &
                 &psi, rho)
-            write(1, 57) k*tStep*vel, rho(1, 1), rho(2, 1), rho(1, 2), rho(2, 2)
+                x = x + k * tStep * vel * 2.D0
+            write(1, 57) x, k*tStep*vel, rho(1, 1), rho(2, 1), rho(1, 2), rho(2, 2)
 200     end do
 
     ! Update psi with the diagonal elements of rho
@@ -160,7 +163,7 @@ program stereo_sim
 100 end do
 ! === End main loop ============================================================
 
-56 format(A19, 4A16)
-57 format(F16.9, 6ES16.6E3)
+56 format(A19, 5A16)
+57 format(6ES16.6E3)
     close(unit = 1)
 end program stereo_sim
