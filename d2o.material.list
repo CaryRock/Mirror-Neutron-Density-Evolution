@@ -1,4 +1,0 @@
-"D2O"   ! Desired file name
-2318.0  ! Velocity
-"Material" "Thickness (cm)" "From-to in radial (cm)" "# Density" "V (neV)" "W_th (neV)" "W_sc (neV)" "W_abs (neV)" "Σ_abs (1/cm)" "Σ_el (1/cm)" "El. scatt. length (cm)" "Abs. Length (cm)"
-"D2O" 105 "20 – 125" 3.329E+022 1.659E+02 4.955E-02 2.137E-07 2.959E-06 4.087E-05 6.495E-01 1.540E+00 2.447E+04
