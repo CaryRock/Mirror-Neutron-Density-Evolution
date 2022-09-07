@@ -5,7 +5,7 @@
 ! regarding mirror neutrons
 
 ! U = V +/- Dm +/- uB
-! W = W1 + v * W2
+! W = Wabs + v * Wsc
 ! Dm = m_n' - m_n in units of eV
 ! eps = 
 
@@ -30,7 +30,7 @@ program stereo_sim
         ! numSteps is the # of desired time steps to take
     !integer                             :: N            
         ! Number of neutron collisions
-    real(8)                             :: Dm, vel, theta0, Vopt, W1, W2, thick
+    real(8)                             :: Dm, vel, theta0, Vopt, Wsc, Wabs,thick
     real(8)                             :: A, B, tStep, ang, x
     !complex(8)                          :: i
     real(8),        dimension(2, 2)     :: rho  ! rho is the density matrix
@@ -82,6 +82,8 @@ program stereo_sim
     INFILE_2 = "material.list"
 
     ! Check the command line for parameters
+    num_lines = get_lines(INFILE_2)
+    allocate(inventory(num_lines))
     call get_params(INFILE_1, Dm, theta0, psi)
 
     !print *, "Dm        :", Dm
@@ -90,20 +92,23 @@ program stereo_sim
     write( DmChar,      58 ) Dm
     write( theta0char,  58 ) theta0
 
-    ! Check the material.list file for the inventory and allocate
-
-    num_lines = get_lines(INFILE_2)
-    allocate(inventory(num_lines))
-        ! Check the allocation with `allocated(...)`, etc.
-
+    ! Shuffle this into get_params for easier running
     call get_materials(inventory, filename, vel, num_lines, INFILE_2)
     write( thickness,   58 ) sum(inventory%d)
 ! === End variable assignments =================================================
     
 ! === Begin initial file I/O ===================================================
     ! Write each file to a directory of the appropriate mass
-    directoryName = "./data/" // trim(filename) // "-" // trim(adjustl(thickness)) // &
+    if (psi(1) == cmplx(1.0, 0.0, 8) .and. psi(2) == cmplx(0.0, 0.0, 8)) then
+        directoryName = "./data/N/" // trim(filename) // "-" // trim(adjustl(thickness)) // &
         &"/" // trim(adjustl(DmChar)) // "/"
+    else if (psi(1) == cmplx(0.0, 0.0, 8) .and. psi(2) == cmplx(1.0, 0.0, 8)) then
+        directoryName = "./data/Np/" // trim(filename) // "-" // trim(adjustl(thickness)) // &
+        &"/" // trim(adjustl(DmChar)) // "/"
+    else
+        directoryName = "./data/" // trim(filename) // "-" // trim(adjustl(thickness)) // &
+        &"/" // trim(adjustl(DmChar)) // "/"
+    end if
     call system('mkdir -p ' // trim (adjustl(directoryName)))
 
     open(unit = 1, file = trim(adjustl(directoryName)) // trim(filename) // "_Dm-" &
@@ -126,18 +131,18 @@ program stereo_sim
     ! numSteps in each material.
 
     do 100 j = 1, num_lines
-        Vopt    = inventory(j)%V   * 1.D-9
-        W1      = inventory(j)%Wsc * 1.D-9
-        W2      = inventory(j)%Wth * 1.D-9
-        thick   = inventory(j)%d / 100
-        vel     = 2318.0
-        tStep   = thick / vel / numSteps
+        Vopt    = inventory(j)%V    * 1.D-9 ! Given in neV, want eV
+        Wsc     = inventory(j)%Wsc  * 1.D-9 ! ^; W_sc
+        Wabs    = inventory(j)%Wabs * 1.D-9 ! ^; W_abs
+        thick   = inventory(j)%d    / 100   ! Was given in cm, want in m
 
-!        print *, "Vopt      :", Vopt
-!        print *, "W1        :", W1
-!        print *, "W2        :", W2
-!        print *, "thick     :", thick
-!        print *, "numSteps  :", numSteps
+        tStep   = thick / ( vel * numSteps )
+
+        print *, "Vopt      :", Vopt
+        print *, "Wsc       :", Wsc
+        print *, "Wabs      :", Wabs
+        print *, "thick     :", thick
+        print *, "numSteps  :", numSteps
         
         ang = 2*(0.5 * atan(0.5 * abs(Dm) * tan(2. * theta0) / (Vopt - Dm)))**2
 ! Generate (2theta^2, 1-2theta^2)
@@ -147,14 +152,17 @@ program stereo_sim
         !psi(1)      = 1 - ang
         !psi(2)      = ang
 ! Generate (1, 0)
-        psi(1)      = cmplx(1.0, 0.0, 8)
-        psi(2)      = cmplx(0.0, 0.0, 8)
+        !psi(1)      = cmplx(1.0, 0.0, 8)
+        !psi(2)      = cmplx(0.0, 0.0, 8)
 
         do 200 k = 1, numSteps
-            call exactBanfor(Dm, vel, theta0, Vopt, W1, W2, thick, A, B, k*tStep, &
-                &psi, rho)
-                x = x + k * tStep * vel * 2.D0
-            write(1, 57) x, k*tStep*vel, rho(1, 1), rho(2, 1), rho(1, 2), rho(2, 2)
+            call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, thick, A, B, &
+                &k*tStep, psi, rho)
+            write(1, 57) x, k*tStep*vel, rho(1, 1), rho(2, 1), rho(1, 2), &
+                &rho(2, 2)
+!            write(6, 57) x, k*tStep*vel, rho(1, 1), rho(2, 1), rho(1, 2), &
+!                &rho(2, 2)
+            x = x + tStep * vel
 200     end do
 
     ! Update psi with the diagonal elements of rho

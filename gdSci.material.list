@@ -1,7 +1,7 @@
-"GdScintillator"    ! File Name           
-2318.0              ! Velocity, m/s
-"#" "Material" "Thickness (cm)" "From-to in radial (cm)" "# Density" "V (neV)" "W_th (neV)" "W_sc (neV)" "W_abs (neV)" "Σ_abs (1/cm)" "Σ_el (1/cm)" "El. scatt. length (cm)"
-"Acrylic (PMMA)" 2.4 "1024.85 – 1027.25" 6.580E+021 -2.001E+01 1.581E-01 1.575E-01 6.024E-04 8.321E-03 2.064E+00 4.844E-01
-"GC Scintillator" 36.9 "1027.25 – 1064.15" 1.968E+021 5.081E+01 1.084E+00 1.080E+00 3.990E-03 2.051E-02 2.367E+01 4.224E-02
-"Acrylic (PMMA)" 2.4 "1067.15 – 1069.55" 6.580E+021 -1.990E+01 1.501E-01 1.150E+00 2.150E+00 8.321E-03 2.064E+00 4.844E-01
-"Gd-doped Scintillator" 36.9 "1069.55 – 1106.45" 1.970E+021 6.140E+01 4.483E+00 1.410E+00 3.073E+00 8.683E-01 2.367E+01 4.224E-02
+"GdSci" ! Desired file name
+2318.0  ! Velocity
+"Material" "Thickness (cm)" "From-to in radial (cm)" "# Density" "V (neV)" "W_th (neV)" "W_sc (neV)" "W_abs (neV)" "Σ_abs (1/cm)" "Σ_el (1/cm)" "El. scatt. length (cm)" "Abs. Length (cm)"
+"Acrylic (PMMA)" 2.4 "1024.85 – 1027.25" 6.580E+021 -1.989E+01 1.581E-01 6.794E-07 6.024E-04 8.321E-03 2.064E+00 4.844E-01 1.202E+02
+"GC Scintillator" 36.9 "1027.25 – 1064.15" 2.202E+021 8.201E+00 4.015E-01 1.726E-06 1.485E-03 1.287E-02 5.295E+00 1.888E-01 7.768E+01
+"Acrylic (PMMA)" 2.4 "1067.15 – 1069.55" 6.580E+021 -1.990E+01 1.501E-01 1.150E+00 2.150E+00 8.321E-03 2.064E+00 4.844E-01 1.008E+00
+"Gd-doped Scintillator" 36.9 "1069.55 – 1106.45" 2.201E+021 8.224E+00 4.090E-01 1.729E-06 8.231E-03 1.306E-02 5.305E+00 1.885E-01 7.657E+01

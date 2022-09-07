@@ -1,9 +1,9 @@
 module exact_banfor_module
 contains
-    subroutine exactBanfor(Dm, vel, theta0, Vopt, W1, W2, lambda, A, B, tStep, psi, rho)
+    subroutine exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, lambda, A, B, tStep, psi, rho)
         implicit none
         ! Input argument declarations
-        real(8) Dm, vel, theta0, Vopt, W1, W2, lambda, A, B, tStep
+        real(8) Dm, vel, theta0, Vopt, Wsc, Wabs, lambda, A, B, tStep
         complex(8), dimension(2, 2) :: s
         real(8), dimension(2, 2)    :: rho
         complex(8), dimension(2)    :: psi, psi2
@@ -34,12 +34,12 @@ contains
         arg2    = cmplx(0.D0, 0.D0, kind = 8)
 
         ! Maximum angle possible - 45 degrees
-        if (theta0 .ge. 0.785) theta0 = 0.785398163
+        if (theta0 .ge. 0.785398163) theta0 = 0.785398163
         hbar = 6.582119569E-16
 
-        V       = Vopt - Dm - B
+        V       = Vopt - Dm
         i       = cmplx(0.0, 1.0)
-        W       = W2 + vel * W1
+        W       = Wabs + vel * Wsc
         eps     = 0.5 * abs(Dm) * tan(2. * theta0)
         
         arg     = 2. * eps / (V - i*W)
@@ -73,7 +73,6 @@ contains
         WW1     = aimag(H1)
         WW2     = aimag(H2)
 
-        !time   = lambda / vel
         time    = tStep
         TOF     = time / hbar
 

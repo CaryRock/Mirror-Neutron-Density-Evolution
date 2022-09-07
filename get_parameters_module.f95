@@ -17,7 +17,7 @@ contains
         logical                     :: i_opt, m_opt, t_opt, N_opt, MN_opt
         
         ! Will 
-        type(option_s)  :: opts(7)
+        type(option_s)  :: opts(8)
         opts(1) = option_s("help",      .false.,    "h")
         opts(2) = option_s("version",   .false.,    "v")
         opts(3) = option_s("mass",      .true. ,    "m")
@@ -25,20 +25,21 @@ contains
         opts(5) = option_s("input_file",.true. ,    "i")
         opts(6) = option_s("initial_n", .true. ,    "N")
         opts(7) = option_s("initial_np",.true. ,    "M")
+        opts(8) = option_s("material",  .true. ,    "L")
 
         if(command_argument_count() .eq. 0) then
             print *, "WARNING: No options entered. Assuming '-i'."
         !    opts = 
         end if
         
-        i_opt = .false.
-        m_opt = .false.
-        t_opt = .false.
-        N_opt = .false.
-        MN_opt = .false.
+        i_opt   = .false.
+        m_opt   = .false.
+        t_opt   = .false.
+        N_opt   = .false.
+        MN_opt  = .false.
 
         do
-            select case(getopt("i:NMm:t:hv", opts))
+            select case(getopt("i:NL:Mm:t:hv", opts))
                 case(char(0))
                     exit
                 case("i")   ! option -i --input-file
@@ -73,11 +74,12 @@ contains
                         print *, "ERROR: Option -t or --theta: not a number"
                         stop
                     end if
-                case("N")
+                case("L")   ! option -L --material
+                case("N")   ! option -N --initial_n
                     N_opt   = .true.  ! Conflicts with option M
                     psi(1)  = cmplx(1.0, 0.0)
                     psi(2)  = cmplx(0.0, 0.0)
-                case("M")
+                case("M")   ! option -M --initial_np
                     MN_opt  = .true.  ! Conflicts with option N
                     psi(1)  = cmplx(0.0, 0.0)
                     psi(2)  = cmplx(1.0, 0.0)

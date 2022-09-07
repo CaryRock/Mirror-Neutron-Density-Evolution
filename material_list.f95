@@ -2,8 +2,10 @@ module material_list
     implicit none
     type materiallist
         character(32)   :: matName, matRange  ! Cols 1, 3
-            ! cols     2, 4,          5, 6,   7,   8,    9,      10,    11
-        real(8)        :: d, numDensity, V, Wth, Wsc, Wabs, sigabs, sigel, elscatl
+            ! cols          2, 4,          5, 6,   7,   8,    9,      10,  
+        real(8)        ::   d, numDensity, V, Wth, Wsc, Wabs, sigabs, sigel
+            ! cols          11       12
+        real(8)        ::   elscatl, abslngth
     end type materiallist
 
 contains
@@ -74,7 +76,7 @@ contains
                 inventory(n)%d, inventory(n)%matRange, &
                 inventory(n)%numDensity, inventory(n)%V, inventory(n)%Wth, &
                 inventory(n)%Wsc, inventory(n)%Wabs, inventory(n)%sigabs, &
-                inventory(n)%sigel, inventory(n)%elscatl
+                inventory(n)%sigel, inventory(n)%elscatl, inventory(n)%abslngth
             ! Not all of the above are useful - some are only there for ease
             ! of file reading because kludging gets the job done-ing
 100     end do
