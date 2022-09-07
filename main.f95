@@ -138,11 +138,11 @@ program stereo_sim
 
         tStep   = thick / ( vel * numSteps )
 
-        print *, "Vopt      :", Vopt
-        print *, "Wsc       :", Wsc
-        print *, "Wabs      :", Wabs
-        print *, "thick     :", thick
-        print *, "numSteps  :", numSteps
+!        print *, "Vopt      :", Vopt
+!        print *, "Wsc       :", Wsc
+!        print *, "Wabs      :", Wabs
+!        print *, "thick     :", thick
+!        print *, "numSteps  :", numSteps
         
         ang = 2*(0.5 * atan(0.5 * abs(Dm) * tan(2. * theta0) / (Vopt - Dm)))**2
 ! Generate (2theta^2, 1-2theta^2)
