@@ -29,11 +29,12 @@ exact_sim.o: exact_banfor_module.mod
 	mv main.o $@
 
 exact_banfor_module.mod: exact_banfor_module.f95 uuid_module.f90 f90getopt.F90 get_parameters_module.f95
-	$(CC) $(CFLAGS) -c exact_banfor_module.f95 
 	$(CC) $(CFLAGS) -c uuid_module.f90 
 	$(CC) $(CFLAGS) -c f90getopt.F90
-	$(CC) $(CFLAGS) -c get_parameters_module.f95
 	$(CC) $(CFLAGS) -c material_list.f95
+	$(CC) $(CFLAGS) -c get_parameters_module.f95
+	$(CC) $(CFLAGS) -c exact_banfor_module.f95 
+
 
 # ===========
 

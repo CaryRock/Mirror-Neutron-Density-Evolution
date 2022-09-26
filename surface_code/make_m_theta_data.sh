@@ -1,6 +1,6 @@
 #!/bin/sh
 
-parallel ~/exact_sim.exe -m {1} -t {2} -V {3} -N -S :::: deltaMs :::: thetas :::: velocity.list
+parallel ~/exact_sim.exe -m {1} -t {2} -N -S :::: deltaMs :::: thetas
 
 #parallel ~/exact_sim.exe -m {1} -t {2} ::: $(seq 1.0E-8 0.5E-8 9.5E-8) ::: $(seq 0.0 0.001 0.78)
 #parallel ~/exact_sim.exe -m {1} -t {2} ::: $(seq 1.0E-7 0.5E-7 9.5E-7) ::: $(seq 0.0 0.001 0.78)
