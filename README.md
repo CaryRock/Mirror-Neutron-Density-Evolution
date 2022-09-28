@@ -8,7 +8,7 @@ This repo contains the Fortran implementation of Y. Kamyshkov, J. Ternullo, L. V
 All credit for these libraries go to their authors.
 
 ## Compiling the Code
-This code is currently a WIP - it functions, but many things must still be done by hand (since it's not been worth my time to automate them). To compile, navigate to the desired program folder under `src` and check out the `Makefile`. The instructions are basically `
+This code is currently a WIP - it functions, but many things must still be done by hand (since it's not been worth my time to automate them). To compile, navigate to the desired program folder under `src` and check out the `Makefile`. The instructions are basically 
 1. `make clean`
 2. `make (call here)`
 
