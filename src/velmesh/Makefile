@@ -1,30 +1,27 @@
-CC = gfortran
-CFLAGS = -Wall -Wextra -pedantic -fimplicit-none -fcheck=all -fbacktrace -O3 -flto
-# Uncomment the appropriate CERNLPATH variable corresponding to your install
-#CERNLPATH=/usr/lib/cernlib/2006-g77/lib
-#CERNLPATH=/usr/lib/x86_64-linux-gnu
-#CERNLPATH=/usr/lib64/
+vel_src = mesh_analyze.f90
+vel_obj = $(patsubst %.f90, build/$(D)/%.o, $(vel_src))
+vel_dep = $(patsubst %.f90, build/$(D)/%.d, $(vel_src))
+vel := build/$(D)/nnp-velmesh
 
-#mathlib = -lm
-#cernlib = $(CERNLPATH)/libpacklib.a $(CERNLPATH)/libkernlib.a $(CERNLPATH)/libmathlib.a
+# === Workaround for gfortran -MM -MG -MT bug ==================================
+DFLAGS = -O3 -cpp -Wall -Wextra -pedantic -fimplicit-none -fcheck=all -fbacktrace 
 
-# ===========
-exact_sim: exact_sim.o
-	$(CC) $(CFLAGS) $^ exact_banfor_module.o file_writing.o uuid_module.o f90getopt.o get_parameters_module.o material_list.o -o ~/velmesh
+lib_o = $(wildcard ../lib/*.o)
+lib_mod = $(wildcard ../lib/*.mod)
 
-exact_sim.o: exact_banfor_module.mod
-	$(CC) $(CFLAGS) -c mesh_analyze.f95
-	mv mesh_analyze.o $@
+ug_obj = $(patsubst %.f90, %.o, $(vel_src))
 
-exact_banfor_module.mod: file_writing.f95 exact_banfor_module.f95 uuid_module.f90 f90getopt.F90 get_parameters_module.f95
-	$(CC) $(CFLAGS) -c uuid_module.f90 
-	$(CC) $(CFLAGS) -c f90getopt.F90
-	$(CC) $(CFLAGS) -c material_list.f95
-	$(CC) $(CFLAGS) -c get_parameters_module.f95
-	$(CC) $(CFLAGS) -c exact_banfor_module.f95
-	$(CC) $(CFLAGS) -c file_writing.f95 
+default: $(ug_obj)
 
-# ===========
+$(ug_obj): $(patsubst %.o, %.f90, $@)
+	cp -r ../lib/$(lib_o) ../lib/$(lib_mod) .
+	gfortran $(DFLAGS) $(lib_o) $(patsubst %.o, %.f90, $@) -o $(patsubst %.o, ~/nnp-velmesh, $@)
+	rm *.o *.mod
+# === Workaround for gfortran -MM -MG -MT bug ==================================
 
-clean:
-	rm -f *.o *.txt *.dat *.mod *.exe ~/*sim.exe
+vel: $(vel)
+$(vel): $(vel_obj) $(lib)
+	echo "LD $@..."
+	$(CF) -o $@ $^ $(LFLAGS) $(lib)
+
+-include $(vel_dep)

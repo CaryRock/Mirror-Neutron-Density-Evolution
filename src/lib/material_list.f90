@@ -9,6 +9,8 @@ module material_list
     end type materiallist
 
 contains
+
+! === get_lines ================================================================
     ! Simply gets the number of lines in the given file file
     ! Returns the number of lines contained in the file
     !
@@ -40,7 +42,9 @@ contains
 
         return
     end function get_lines
+! === get_lines ================================================================
 
+! === get_vel_lines ============================================================
     integer function get_vel_lines(INFILE_3) result(nlines)
         implicit none
         character(64), intent(in)               :: INFILE_3
@@ -57,6 +61,7 @@ contains
         end do
         close(1)
 
+        nlines = nlines - 1 ! Don't need the extra line
         return
     end function get_vel_lines
 
@@ -73,6 +78,9 @@ contains
 101     end do
         close(1)
         end subroutine get_velocities
+! === get_vel_lines ============================================================
+
+! === get_materials ============================================================
     ! getMaterials(...) is called by the main function to read in the data file
     ! "material.list".
     !
@@ -87,13 +95,16 @@ contains
     ! Output:
     !   type(...), dimension(:) :: inventory
     !       Inventory will have been "filled in" appropriately
-    subroutine get_materials(inventory, name, nlines, INFILE_2)
+    subroutine get_materials(inventory, name, nlines, INFILE_2, &
+                            &skip_Wsc, skip_Wabs)
         implicit none
-        character(128),      intent(in)                 :: INFILE_2
-        character(64)                                   :: name
-        integer,            intent(in)                  :: nlines
-        type(materiallist), dimension(:)                :: inventory
-        integer                                         :: n = 0, error = 0
+        character(128),      intent(in)     :: INFILE_2
+        character(64)                       :: name
+        integer,            intent(in)      :: nlines
+        type(materiallist), dimension(:)    :: inventory
+        logical, intent(in)                 :: skip_Wsc, skip_Wabs
+        integer                             :: n = 0, error = 0
+        
 
         open(unit = 1, file = INFILE_2, status = "old")
         read(1, *, iostat = error) name
@@ -107,8 +118,17 @@ contains
                 &inventory(n)%sigel, inventory(n)%elscatl, inventory(n)%abslngth
             ! Not all of the above are useful - some are only there for ease
             ! of file reading because kludging gets the job done-ing
+                if (skip_Wsc .eqv. .true.) then
+                    inventory(n)%Wsc = 0.D0
+                end if
+
+                if (skip_Wabs .eqv. .true.) then
+                    inventory(n)%Wsc = 0.D0
+                end if
 100     end do
         
         close(1)
     end subroutine get_materials
+! === get_materials ============================================================
+
 end module material_list
