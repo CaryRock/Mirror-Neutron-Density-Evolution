@@ -19,8 +19,8 @@ contains
         integer                     :: nLines, i
         type(materiallist), dimension(:), allocatable   :: inventory
         character(256)              :: loc
-        real(8)                     :: mass, angle, vel
-        complex(8), dimension(2)    :: psi
+        real                     :: mass, angle, vel
+        complex, dimension(2)    :: psi
         logical                     :: i_opt, L_opt, m_opt, t_opt, N_opt
         logical                     :: MN_opt, V_opt
         logical                     :: skip_mid, skip_Wsc, skip_Wabs
@@ -216,8 +216,8 @@ contains
         character(64), intent(in)   :: fName
         integer                     :: nLines, index, nMasses, nAngles
         type(materiallist), dimension(:), allocatable   :: inventory
-        real(8), dimension(:), allocatable  :: Masses, Angles
-        complex(8), dimension(2)    :: psi
+        real, dimension(:), allocatable  :: Masses, Angles
+        complex, dimension(2)    :: psi
         logical                     :: L_opt, m_opt, t_opt, N_opt
         logical                     :: MN_opt, V_opt
         logical                     :: skip_mid, skip_Wsc, skip_Wabs
@@ -255,7 +255,7 @@ contains
 
         do
 !            select case(getopt("ci:NL:Mm:St:V:hv", opts))
-            select case(getopt("AcNL:Mm:St:hv", opts))
+            select case(getopt("AcL:NMm:St:hv", opts))
                 case(char(0))
                     exit
                 
@@ -295,16 +295,15 @@ contains
                     L_opt = .true.
                     INFILE_2 = trim(optarg)
                     !write(6, *) "Will read inventory from " // INFILE_2
-
                 case("N")   ! option -N --initial_n
                     N_opt   = .true.  ! Conflicts with option M
-                    psi(1)  = cmplx(1.0, 0.0)
-                    psi(2)  = cmplx(0.0, 0.0)
+                    psi(1)  = cmplx(1.D0, 0.D0, 8)
+                    psi(2)  = cmplx(0.D0, 0.D0, 8)
 
                 case("M")   ! option -M --initial_np
                     MN_opt  = .true.  ! Conflicts with option N
-                    psi(1)  = cmplx(0.0, 0.0)
-                    psi(2)  = cmplx(1.0, 0.0)
+                    psi(1)  = cmplx(0.D0, 0.D0, 8)
+                    psi(2)  = cmplx(1.D0, 0.D0, 8)
 
                 case("S")   ! option -S --skip-mid
                     skip_mid= .true.
@@ -368,8 +367,8 @@ contains
         else if (.not. N_opt .and. .not. MN_opt) then
             ! Just default to starting as neutron. Figure out specifying 
             ! starting angle later.
-            psi(1)  = cmplx(1.0, 0.0)
-            psi(2)  = cmplx(0.0, 0.0)
+            psi(1)  = cmplx(1.D0, 0.D0, 8)
+            psi(2)  = cmplx(0.D0, 0.D0, 8)
         end if
 
         ! TODO: Is this a bug? Intended (future) behavior?
@@ -386,11 +385,11 @@ contains
                             &skip_Wsc, skip_Wabs)
         
         ! Allocate and create the lists for masses and angles desired
-        nMasses = get_lines(INFILE_4) + 2
+        nMasses = get_lines(INFILE_4) + 2   ! Because the function's designed for reading inventory files
         allocate(Masses(nMasses))
         open(unit = 1, file = INFILE_4, status = "old")
         do index = 1, nMasses
-            read(1, 50)  Masses(index)
+            read(1, '(F37.30)')  Masses(index)
         end do
         close(unit = 1)
 

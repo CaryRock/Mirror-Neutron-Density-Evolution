@@ -4,21 +4,21 @@ contains
                             &tStep, psi, rho)
         implicit none
         ! Input argument declarations
-        real(8) Dm, vel, theta0, Vopt, Wsc, Wabs, lambda, A, B, tStep
-        complex(8), dimension(2, 2) :: s
-        real(8), dimension(2, 2)    :: rho
-        complex(8), dimension(2)    :: psi, psi2
+        real    Dm, vel, theta0, Vopt, Wsc, Wabs, lambda, A, B, tStep
+        complex   , dimension(2, 2) :: s
+        real   , dimension(2, 2)    :: rho
+        complex   , dimension(2)    :: psi, psi2
         
         ! Required variable declarations - not from invocation
-        real(8)     hbar, nmass, Qe, s2ze, TOF, time, eps   
-        real(8)     theta, omega, V, W, U1, U2, WW1, WW2, DE
+        real        hbar, nmass, Qe, s2ze, TOF, time, eps   
+        real        theta, omega, V, W, U1, U2, WW1, WW2, DE
 !        real(8)     unitar
-        complex(8)  i, zeta, D, zeta2, arg, cze, cze2, sze, sze2, H1, H2, arg2  
-        complex(8)  czestar, szestar, cze2star, sze2star, uroo, roo             
-        complex(8)  H1C, H2C
-        complex(8)  aee1, aee2, ee1, ee2, ee1C, ee2C
+        complex     i, zeta, D, zeta2, arg, cze, cze2, sze, sze2, H1, H2, arg2  
+        complex     czestar, szestar, cze2star, sze2star, uroo, roo             
+        complex     H1C, H2C
+        complex     aee1, aee2, ee1, ee2, ee1C, ee2C
         
-        complex(8)  psiN, psiM
+        complex     psiN, psiM
         
         lambda  = 0.D0
         A       = 0.D0

@@ -3,9 +3,9 @@ module material_list
     type materiallist
         character(32)   :: matName, matRange  ! Cols 1, 3
             ! cols          2, 4,          5, 6,   7,   8,    9,      10,  
-        real(8)        ::   d, numDensity, V, Wth, Wsc, Wabs, sigabs, sigel
+        real        ::   d, numDensity, V, Wth, Wsc, Wabs, sigabs, sigel
             ! cols          11       12
-        real(8)        ::   elscatl, abslngth
+        real        ::   elscatl, abslngth
     end type materiallist
 
 contains
@@ -68,7 +68,7 @@ contains
     subroutine get_velocities(INFILE_3, num_vels, vel_list)
         implicit none
         character(64), intent(in)   :: INFILE_3
-        real(8), dimension(:)       :: vel_list
+        real, dimension(:)       :: vel_list
         integer                     :: num_vels, l, error
 
         error = 0

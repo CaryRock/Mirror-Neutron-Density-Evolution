@@ -14,6 +14,8 @@
 ! C-style commandline arguments
 ! 
 
+!TODO: Include option for including variance output - default to not so
+!TODO: Include option for including rho_12 & rho_21 output - default to not so
 program stereo_sim
 !    use omp_lib
     use exact_banfor_module 
@@ -102,7 +104,7 @@ program stereo_sim
 
     ! For the moment, hard-code location of "parameter.list" and "material.list"
     ! That can be addressed later
-    INFILE_1 = "parameter.list"
+    !INFILE_1 = "parameter.list"
     INFILE_2 = "material.list"
     INFILE_3 = "velocity.list"
     INFILE_4 = "deltaMs"
@@ -176,32 +178,31 @@ program stereo_sim
 
     !$OMP PARALLEL PRIVATE(Dm, theta0, Vopt, Wsc, Wabs, thick, rho_results, rho_ave, rho_var, i, j, k, l, vel)
     !$OMP DO
-    num_vels = 1
 
     do i = 1, nMasses
         do j = 1, nAngles
-            do k = 1, 1!num_vels
+            rho_results = 0.D0
+            
+            do k = 1, num_vels
                 vel = vel_list(k)
-                
                 Dm = Masses(i)
                 theta0 = Angles(j)
 
                 call iterate_probability(inventory, vel, errorlog, numSteps, &
                     &no_scattering, no_absorption, only_endpoint, Dm, theta0, &
                     &lambda, A, B, psi, rho, num_lines)
-
-                rho_results(k, 1) = rho(1, 1)
-                rho_results(k, 2) = rho(1, 2)
-                rho_results(k, 3) = rho(2, 1)
-                rho_results(k, 4) = rho(2, 2)
-
-                exit
+                
+                rho_results(k, 1) = rho_results(k, 1) + rho(1, 1)
+                rho_results(k, 2) = rho_results(k, 2) + rho(1, 2)
+                rho_results(k, 3) = rho_results(k, 3) + rho(2, 1)
+                rho_results(k, 4) = rho_results(k, 4) + rho(2, 2)
             end do
-        
+            
             do k = 1, 4
-                rho_ave(k) = sum(rho_results(:,k)) / size(vel_list)
+                rho_ave(k) = sum(rho_results(:,k)) / size(vel_list)!size(rho_results(:, k))
                 rho_var(k) = compute_variance(rho_results(:,k))
             end do
+
             !$OMP CRITICAL
             mesh1(i, j) = rho_ave(1)
             mesh2(i, j) = rho_ave(2)
@@ -280,61 +281,61 @@ contains
         !var = var / (size(array) - 1)
     end function compute_variance
 
-    subroutine iterate_probability(inventory, vel, errorlog, numSteps, &
-        &no_scattering, no_absorption, only_endpoint, Dm, theta0, lambda, A, &
-        &B, psi, rho, num_lines)
+    subroutine iterate_probability(inven, veloc, errlog, nSteps, &
+        &no_sc, no_abs, endpoint_only, deltaM, thta0, lmbda, A_val, &
+        &B_val, ppsi, rrho, nLines)
         implicit none
-        type(materiallist), dimension(:), intent(in)    :: inventory
-        real(8)         :: vel, Dm, theta0, lambda, A, B
-        integer         :: numSteps, num_lines, n!, u
-        character(256)  :: errorlog
-        logical         :: no_scattering, no_absorption, only_endpoint
-        real(8), dimension(2, 2)    :: rho
-        complex(8), dimension(2)    :: psi
+        type(materiallist), dimension(:), intent(in)    :: inven
+        real(8)         :: veloc, deltaM, thta0, lmbda, A_val, B_val
+        integer         :: nSteps, nLines, n!, u
+        character(256)  :: errlog
+        logical         :: no_sc, no_abs, endpoint_only
+        real(8), dimension(2, 2)    :: rrho
+        complex(8), dimension(2)    :: ppsi
 
-        do l = 1, num_lines
-            Vopt    = inventory(l)%V    * 1.D-9 ! Given in neV, want eV
-            Wsc     = inventory(l)%Wsc  * 1.D-9 ! ^; W_sc
-            Wabs    = inventory(l)%Wabs * 1.D-9 ! ^; W_abs
-            thick   = inventory(l)%d    / 100   ! Was given in cm, want in m
+        do l = 1, nLines
+            Vopt    = inven(l)%V    * 1.D-9 ! Given in neV, want eV
+            Wsc     = inven(l)%Wsc  * 1.D-9 ! ^; W_sc
+            Wabs    = inven(l)%Wabs * 1.D-9 ! ^; W_abs
+            thick   = inven(l)%d    / 100   ! Was given in cm, want in m
 
-            if (vel .le. 1.D0) then
-                open(unit = 99, file = errorlog)
-                vel = 1.
-                write(unit = 99, fmt = *) "One value of vel set to 1 due to being too small."
+            if (veloc .le. 1.D0) then
+                open(unit = 99, file = errlog)
+                veloc = 1.
+                write(unit = 99, fmt = *) "One value of veloc set to 1 due to being too small."
                 close(unit = 99)
             end if
 
-            tStep   = thick / ( vel * numSteps )
+            tStep   = thick / ( veloc * nSteps )
             
-            !ang = 2*(0.5 * atan(0.5 * abs(Dm) * tan(2. * theta0) / (Vopt - Dm)))**2
+            !ang = 2*(0.5 * atan(0.5 * abs(deltaM) * tan(2. * thta0) / (Vopt - deltaM)))**2
     ! Generate (2theta^2, 1-2theta^2)
-            !psi(1)      = ang
-            !psi(2)      = 1 - ang
+            !ppsi(1)      = ang
+            !ppsi(2)      = 1 - ang
     ! Generate (1-2theta^2, theta^2)
-            !psi(1)      = 1 - ang
-            !psi(2)      = ang
-            if (only_endpoint) then
-                call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, lambda,A,B,&
-                                &thick / vel, psi, rho)
+            !ppsi(1)      = 1 - ang
+            !ppsi(2)      = ang
+            if (endpoint_only) then
+                call exactBanfor(deltaM, veloc, thta0, Vopt, Wsc, Wabs, lmbda, &
+                                &A_val,B_val, thick / veloc, ppsi, rrho)
             else
-                do 200 n = 1, numSteps
-                    call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, lambda, &
-                                    &A, B, n*tStep, psi, rho)
+                do 200 n = 1, nSteps
+                    call exactBanfor(deltaM, veloc, thta0, Vopt, Wsc, Wabs, &
+                                    &lmbda, A_val, B_val, n*tStep, ppsi, rrho)
                     print *, "TODO: Specify a unit file to write this to, or remove this whole bit."
                     stop
-                    write(1, 57) x, n*tStep*vel, rho(1, 1), rho(2, 1), rho(1, 2), &
-                        &rho(2, 2)
-                    x = x + tStep * vel
+                    write(1, 57) x, n*tStep*veloc, rrho(1, 1), rrho(2, 1), &
+                        &rrho(1, 2), rrho(2, 2)
+                    x = x + tStep * veloc
 200             end do
             end if
 
 
-    ! Update psi with the diagonal elements of rho
+    ! Update ppsi with the diagonal elements of rrho
     ! Used for if multiple materials that interface
-!            if (num_lines .gt. 1) then
-!                psi(1) = sqrt(rho(1, 1))
-!                psi(2) = sqrt(rho(2, 2))
+!            if (nLines .gt. 1) then
+!                ppsi(1) = sqrt(rrho(1, 1))
+!                ppsi(2) = sqrt(rrho(2, 2))
 !            end if
         end do
 

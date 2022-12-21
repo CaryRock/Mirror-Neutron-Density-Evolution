@@ -1,13 +1,13 @@
 module NNp_file_writing
     type mesh_file_data
-        complex(8),     dimension(2)    :: psi
-        real(8),        dimension(2, 2) :: rho
+        complex,     dimension(2)    :: psi
+        real,        dimension(2, 2) :: rho
         character(:), dimension(:, :), allocatable   :: rhonn
         character(:), allocatable    :: dist, thetaChar, massChar, xChar
         character(:), allocatable    :: DmChar, theta0char, thickness
         character(64)                   :: filename
         character(36)                   :: uuid
-        real(8)                         :: Dm, theta0, x
+        real                         :: Dm, theta0, x
         logical                         :: scattering, absorption
         
         integer                         :: prec
@@ -24,14 +24,14 @@ contains
         implicit none
         !integer, parameter              :: prec = 18
         integer, intent(in)             :: prec
-        complex(8),     dimension(2)    :: psi
-        real(8),        dimension(2, 2) :: rho
+        complex,     dimension(2)    :: psi
+        real,        dimension(2, 2) :: rho
         character(prec),dimension(2, 2) :: rhonn
         character(prec)                 :: dist, thetaChar, massChar, xChar
         character(prec)                 :: DmChar, theta0char, thickness
         character(64)                   :: filename
         character(36)                   :: uuid
-        real(8)                         :: Dm, theta0, x
+        real                         :: Dm, theta0, x
         logical                         :: Wsc, Wabs
 
         character(2)                    :: ff56, ff57
@@ -62,11 +62,12 @@ contains
         return
     end function create_msd_struct
 
-    character(256) function set_directory(mfp) result(directoryName)
+    character(256) function set_directory(mfp, prog_type) result(directoryName)
         implicit none
         type(mesh_file_data)    :: mfp
+        character(4)            :: prog_type
         
-        directoryName = "./data/mesh/"
+        directoryName = "./data/" // prog_type // "/"
 
         ! if psi = (1, 0)
         !   directoryName = directoryName // "N/"
@@ -106,7 +107,7 @@ contains
 
         write(unt, '(I1)') u
 
-        directoryName = set_directory(mfp)
+        directoryName = set_directory(mfp, "mesh")
         
         call system('mkdir -p ' // trim(adjustl(directoryName)))
 
@@ -119,6 +120,51 @@ contains
         return
     end subroutine mesh_file_prepare_ave
 
+    subroutine step_file_prepare_ave(mfp, directoryName, file, element, u)
+        implicit none
+        type(mesh_file_data)    :: mfp
+        character(256)          :: directoryName, file
+        character(3)            :: element
+        character               :: unt
+        integer                 :: u
+
+        write(unt, '(I1)') u
+
+        directoryName = set_directory(mfp, "step")
+
+        call system('mkdir -p ' // trim(adjustl(directoryName)))
+
+        file = trim(adjustl(directoryName)) // trim(adjustl(mfp%filename)) &
+            &// "_Step_" // unt // "_ave_data_" // mfp%uuid // ".dat"
+
+        open(unit = u*10, file = trim(adjustl(file)), status = "unknown")
+        write(u*10, "(a16)") "#avg(" // trim(element) // ")"
+
+        return
+    end subroutine step_file_prepare_ave
+
+    subroutine wabs_file_prepare_ave(mfp, directoryName, file, element, u, m)
+        implicit none
+        type(mesh_file_data)    :: mfp
+        character(256)          :: directoryName, file
+        character(4)            :: element, mnt
+        character               :: unt
+        integer                 :: u, m
+        
+        write(unt, '(I1)') u
+        write(mnt, '(I4.4)') m
+
+        directoryName = set_directory(mfp, "wabs")
+        call system('mkdir -p ' // trim(adjustl(directoryName)))
+
+        file = trim(adjustl(directoryName)) // trim(adjustl(mfp%filename)) &
+            &// "_Wabs_" // unt //"_" // mnt // "_ave_data_" // mfp%uuid // ".dat"
+        
+        open(unit = u, file = trim(adjustl(file)), status = "unknown")
+        write(u, "(A16)") "#ave(" // trim(adjustl(element)) // ")"
+        close(unit = u)
+    end subroutine wabs_file_prepare_ave
+
     subroutine mesh_file_prepare_var(mfp, directoryName, file, element, u)
         implicit none
         type(mesh_file_data)    :: mfp
@@ -129,22 +175,75 @@ contains
 
         write(unt, '(I1)') u
 
-        directoryName = set_directory(mfp)
+        directoryName = set_directory(mfp, "mesh")
 
         call system('mkdir -p ' // trim(adjustl(directoryName)))
 
         file = trim(adjustl(directoryName)) // trim(adjustl(mfp%filename)) &
             &// "_Mesh_" // unt // "_var_data_" // mfp%uuid // ".dat"
 
-        open(unit = u*10, file = trim(adjustl(file)), status = "unknown")
-        write(u*10, "(A16)") "#var(" // trim(adjustl(element)) // ")"
+        open(unit = u, file = trim(adjustl(file)), status = "unknown")
+        write(u, "(A16)") "#var(" // trim(adjustl(element)) // ")"
         
         return
     end subroutine mesh_file_prepare_var
 
+    subroutine step_file_prepare_var(mfp, directoryName, file, element, u)
+        implicit none
+        type(mesh_file_data)    :: mfp
+        character(256)          :: directoryName, file
+        character(3)            :: element
+        character               :: unt
+        integer                 :: u
+
+        write(unt, '(I1)') u
+
+        directoryName = set_directory(mfp, "step")
+
+        call system('mkdir -p ' // trim(adjustl(directoryName)))
+
+        file = trim(adjustl(directoryName)) // trim(adjustl(mfp%filename)) &
+            &// "_Step_" // unt // "_var_data_" // mfp%uuid // ".dat"
+
+        open(unit = u*10, file = trim(adjustl(file)), status = "unknown")
+        write(u*10, "(A16)") "#var(" // trim(adjustl(element)) // ")"
+
+        return
+    end subroutine step_file_prepare_var
+
+    subroutine file_prepare(mfp, prog_type, dat_type, &
+                                        &directoryName, file, element, u)
+        implicit none
+        type(mesh_file_data)    :: mfp
+        character(4)            :: prog_type
+        character(3)            :: dat_type
+        character(256)          :: directoryName, file
+        character(3)            :: element
+        character               :: unt
+        integer                 :: u
+
+        write(unt, '(I1)') u
+
+        directoryName = set_directory(mfp, prog_type)
+
+        call system('mkdir -p ' // trim(adjustl(directoryName)))
+        
+        file = trim(adjustl(directoryName)) // trim(adjustl(mfp%filename)) &
+            &// "_" // trim(adjustl(prog_type)) // "_" // unt // "_" &
+            &// trim(adjustl(dat_type)) // "_data_" // mfp%uuid // ".dat"
+
+        !print *, file
+
+        open(unit = u*10, file = trim(adjustl(file)), status = "unknown")
+        write(u*10, "(A16)") "#"// dat_type // "(" // &
+                                            &trim(adjustl(element)) // ")"
+
+        return
+    end subroutine file_prepare
+
     subroutine mesh_file_write(rho_av, rho_vr)
         implicit none
-        real(8), dimension(4), intent(in)   :: rho_av, rho_vr
+        real, dimension(4), intent(in)   :: rho_av, rho_vr
 
         write(1, "(8ES16.6E3)") rho_av(1), rho_av(2), rho_av(3), rho_av(4), &
             &rho_vr(1), rho_vr(2), rho_vr(3), rho_vr(4)
@@ -156,7 +255,7 @@ contains
         type(mesh_file_data)    :: mfp    ! "mesh_file_prep"
         character(256)          :: directoryName, file
 
-        directoryName = set_directory(mfp)
+        directoryName = set_directory(mfp, "coor")
         call system('mkdir -p ' // trim (adjustl(directoryName)))
         
         file = trim(adjustl(directoryName)) // trim(adjustl(mfp%filename)) &
@@ -176,4 +275,5 @@ contains
             &mfp%rho(1, 1), mfp%rho(2, 1), mfp%rho(1, 2), mfp%rho(2, 2)
 
     end subroutine coord_file_prepare
+
 end module NNp_file_writing
