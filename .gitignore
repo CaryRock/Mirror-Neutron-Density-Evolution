@@ -37,3 +37,7 @@ data/
 *.datsum
 *material.list
 *.csv
+mat_lists
+list_of_lists
+src/test/*.txt
+src/test/*.ipynb
