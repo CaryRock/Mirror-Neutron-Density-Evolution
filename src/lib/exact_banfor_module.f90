@@ -1,35 +1,34 @@
 module exact_banfor_module
 contains
-    subroutine exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, lambda, A, B, &
-                            &tStep, psi, rho)
+    recursive subroutine exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, tStep, psi, rho)
         implicit none
         ! Input argument declarations
-        real    Dm, vel, theta0, Vopt, Wsc, Wabs, lambda, A, B, tStep
-        complex   , dimension(2, 2) :: s
-        real   , dimension(2, 2)    :: rho
-        complex   , dimension(2)    :: psi, psi2
+        real    Dm, vel, theta0, Vopt, Wsc, Wabs, tStep
+        complex, dimension(2, 2)  :: s
+        real, dimension(2, 2)     :: rho
+        complex, dimension(2)     :: psi!, psi2
         
         ! Required variable declarations - not from invocation
-        real        hbar, nmass, Qe, s2ze, TOF, time, eps   
-        real        theta, omega, V, W, U1, U2, WW1, WW2, DE
-!        real(8)     unitar
-        complex     i, zeta, D, zeta2, arg, cze, cze2, sze, sze2, H1, H2, arg2  
+        real        hbar, TOF, time, eps   
+        real        V, W, U1, U2, WW1, WW2, DE
+!        real        unitar
+!        real        lambda, A, B, nmass, Qe, theta, omega
+!        complex     s2ze, D, arg2
+        complex     i, zeta, zeta2, arg, cze, cze2, sze, sze2, H1, H2
         complex     czestar, szestar, cze2star, sze2star, uroo, roo             
         complex     H1C, H2C
         complex     aee1, aee2, ee1, ee2, ee1C, ee2C
         
-        complex     psiN, psiM
-        
-        lambda  = 0.D0
-        A       = 0.D0
-        B       = 0.D0
-        nmass   = 0.D0
-        Qe      = 0.D0
-        s2ze    = 0.D0
-        theta   = 0.D0
-        omega   = 0.D0
-        D       = 0.D0
-        arg2    = cmplx(0.D0, 0.D0, kind = 8)
+        !lambda  = 0.0
+        !A       = 0.0
+        !B       = 0.0
+        !nmass   = 0.0
+        !Qe      = 0.0
+        !s2ze    = cmplx(0.0, 0.0)
+        !theta   = 0.0
+        !omega   = 0.0
+        !D       = cmplx(0.0, 0.0)
+        !arg2    = cmplx(0.0, 0.0)
 
         ! Maximum angle possible - 45 degrees
         if (theta0 .ge. 0.785398163) theta0 = 0.785398163
@@ -44,9 +43,6 @@ contains
         zeta2   = atan(arg)
         zeta    = 0.5 * zeta2
         
-        psiN    = psi(1)
-        psiM    = psi(2)
-
         cze     = cos(zeta)
         sze     = sin(zeta)
         cze2    = cze * cze
@@ -75,9 +71,9 @@ contains
         TOF     = time / hbar
 
         aee1    = -i * H1 * TOF
-        ee1     = cdexp(aee1)
+        ee1     = cexp(aee1)
         aee2    = -i * H2 * TOF
-        ee2     = cdexp(aee2)
+        ee2     = cexp(aee2)
         ee1C    = conjg(ee1)
         ee2C    = conjg(ee2)
 
@@ -86,12 +82,16 @@ contains
         s(1, 2) = cze * sze * (ee1 - ee2)
         s(2, 1) = cze * sze * (ee1 - ee2)
         
-        psi2 = matmul(s, psi)
+        !psi = matmul(s, psi)
 
-        rho(1, 1) = realpart(psi2(1) * conjg(psi2(1)))
-        rho(2, 2) = realpart(psi2(2) * conjg(psi2(2)))
-        rho(1, 2) = realpart(psi2(1) * conjg(psi2(2)))
-        rho(2, 1) = realpart(psi2(2) * conjg(psi2(1)))
+        !rho(1, 1) = real(psi(1) * conjg(psi(1)))
+        !rho(2, 2) = real(psi(2) * conjg(psi(2)))
+        !rho(1, 2) = real(psi(1) * conjg(psi(2)))
+        !rho(2, 1) = real(psi(2) * conjg(psi(1)))
+        rho(1, 1) = real(s(1, 1) * conjg(s(1, 1)))
+        rho(1, 2) = real(s(1, 2) * conjg(s(2, 1)))
+        rho(2, 1) = real(s(2, 1) * conjg(s(1, 2)))
+        rho(2, 2) = real(s(2, 2) * conjg(s(2, 2)))
 
         !print *, "rho = ", rho
         return 

@@ -16,7 +16,7 @@ contains
         character(32), parameter    :: version = "Version 0.2.0"
         character(128)              :: INFILE_1, INFILE_2
         character(64), intent(in)   :: fName
-        integer                     :: nLines, i
+        integer                     :: nLines, i, numSteps
         type(materiallist), dimension(:), allocatable   :: inventory
         character(256)              :: loc
         real                     :: mass, angle, vel
@@ -145,7 +145,7 @@ contains
 !                            &particles.",&
                         "   -h  --help          Print this help screen",&
                         "   -v  --version       Print version information"
-
+                        stop
                 case("v")   ! version information
                     print *, version
             end select
@@ -196,7 +196,7 @@ contains
         
         if (skip_Wsc) then
             do i = 1, nLines
-                inventory(i)%Wsc = 0.D0
+                inventory(i)%Wsc = 0.0
             end do
         end if
     end subroutine get_params
@@ -206,7 +206,7 @@ contains
     subroutine get_vel_params(INFILE_2, INFILE_4, INFILE_5,&
                             &inventory, psi, fName, nLines, skip_mid,&
                             &skip_Wsc, skip_Wabs, Masses, Angles, &
-                            &nMasses, nAngles)
+                            &nMasses, nAngles, nVels)
         use f90getopt
         use material_list
         implicit none
@@ -215,6 +215,7 @@ contains
         character(128)              :: INFILE_2, INFILE_4, INFILE_5
         character(64), intent(in)   :: fName
         integer                     :: nLines, index, nMasses, nAngles
+        integer                     :: numSteps, nVels
         type(materiallist), dimension(:), allocatable   :: inventory
         real, dimension(:), allocatable  :: Masses, Angles
         complex, dimension(2)    :: psi
@@ -255,7 +256,7 @@ contains
 
         do
 !            select case(getopt("ci:NL:Mm:St:V:hv", opts))
-            select case(getopt("AcL:NMm:St:hv", opts))
+            select case(getopt("AcL:NMm:St:V:hv", opts))
                 case(char(0))
                     exit
                 
@@ -297,26 +298,26 @@ contains
                     !write(6, *) "Will read inventory from " // INFILE_2
                 case("N")   ! option -N --initial_n
                     N_opt   = .true.  ! Conflicts with option M
-                    psi(1)  = cmplx(1.D0, 0.D0, 8)
-                    psi(2)  = cmplx(0.D0, 0.D0, 8)
+                    psi(1)  = cmplx(1.0, 0.0)
+                    psi(2)  = cmplx(0.0, 0.0)
 
                 case("M")   ! option -M --initial_np
                     MN_opt  = .true.  ! Conflicts with option N
-                    psi(1)  = cmplx(0.D0, 0.D0, 8)
-                    psi(2)  = cmplx(1.D0, 0.D0, 8)
+                    psi(1)  = cmplx(0.0, 0.0)
+                    psi(2)  = cmplx(1.0, 0.0)
 
                 case("S")   ! option -S --skip-mid
                     skip_mid= .true.
 
-!                case("V")   ! option -V --velocity
-!                    V_opt   = .true.
-!                    if(isnum(trim(optarg)) > 0) then    ! Check for a number in "optarg"
-!                        read(optarg, *) vel
-!                    else
-!                        print *, trim(optarg)
-!                        print *, "ERROR: Option -V or --velocity: not a number"
-!                        STOP
-!                    end if
+                case("V")   ! option -V --velocity
+                    V_opt   = .true.
+                    if(isnum(trim(optarg)) > 0) then    ! Check for a number in "optarg"
+                        read(optarg, *) nVels
+                    else
+                        print *, trim(optarg)
+                        print *, "ERROR: Option -V or --velocity: not a number"
+                        STOP
+                    end if
 
                 case("h")   ! help output
                     write(*, '(6(A/),/,4(A/))')&
@@ -334,9 +335,11 @@ contains
 !                            &particles.",&
                         "   -h  --help          Print this help screen",&
                         "   -v  --version       Print version information"
-
+                        
+                        stop
                 case("v")   ! version information
                     print *, version
+                    stop
             end select
         end do
     
@@ -367,14 +370,14 @@ contains
         else if (.not. N_opt .and. .not. MN_opt) then
             ! Just default to starting as neutron. Figure out specifying 
             ! starting angle later.
-            psi(1)  = cmplx(1.D0, 0.D0, 8)
-            psi(2)  = cmplx(0.D0, 0.D0, 8)
+            psi(1)  = cmplx(1.0, 0.0)
+            psi(2)  = cmplx(0.0, 0.0)
         end if
 
-        ! TODO: Is this a bug? Intended (future) behavior?
         if (.not. V_opt) then
-            ! Read velocity from data file
-            continue
+            ! If not specified, default to 100
+            nVels = 100
+            !continue
         end if
 
         ! Allocate and create the material list array
@@ -385,7 +388,7 @@ contains
                             &skip_Wsc, skip_Wabs)
         
         ! Allocate and create the lists for masses and angles desired
-        nMasses = get_lines(INFILE_4) + 2   ! Because the function's designed for reading inventory files
+        nMasses = get_num_masses(INFILE_4)
         allocate(Masses(nMasses))
         open(unit = 1, file = INFILE_4, status = "old")
         do index = 1, nMasses
@@ -393,7 +396,7 @@ contains
         end do
         close(unit = 1)
 
-        nAngles = get_lines(INFILE_5) + 2
+        nAngles = get_num_angles(INFILE_5)
         allocate(Angles(nAngles))
         open(Unit = 1, file = INFILE_5, status = "old")
         do index = 1, nAngles

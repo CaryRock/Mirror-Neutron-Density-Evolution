@@ -7,7 +7,7 @@ lib	:=build/$(D)/lib.a
 
 # === MANUAL ===================================================================
 ug_obj  = $(patsubst %.f90, %.o, $(lib_src))
-DFLAGS = -cpp -O -Wall -Wextra -fbacktrace -fcheck=all -pedantic -fimplicit-none -fdefault-real-16
+DFLAGS = -march=x86-64 -g -cpp -Wall -Wextra -fbacktrace -fcheck=all -pedantic -fimplicit-none -fdefault-real-8
 
 all: $(ug_obj)
 

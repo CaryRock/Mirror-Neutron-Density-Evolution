@@ -73,11 +73,11 @@ contains
         !   directoryName = directoryName // "N/"
         ! else if psi = (0, 1)
         !   directoryName = directoryName // "Mn/"
-        if (mfp%psi(1) == cmplx(1.0, 0.0, 8) .and. mfp%psi(2) == &
-                &cmplx(0.0, 0.0, 8)) then
+        if (mfp%psi(1) == cmplx(1.0, 0.0) .and. mfp%psi(2) == &
+                &cmplx(0.0, 0.0)) then
             directoryName = trim(adjustl(directoryName)) // "N/"
-        else if (mfp%psi(1) == cmplx(0.0, 0.0, 8) .and. mfp%psi(2) == &
-                    &cmplx(1.0, 0.0, 8)) then
+        else if (mfp%psi(1) == cmplx(0.0, 0.0) .and. mfp%psi(2) == &
+                    &cmplx(1.0, 0.0)) then
             directoryName = trim(adjustl(directoryName)) // "Mn/"
         else
             directoryName = trim(adjustl(directoryName)) // "mix/"
@@ -93,8 +93,7 @@ contains
             directoryName = trim(adjustl(directoryName)) // "with_sc/"
         end if
 
-        directoryName = trim(adjustl(directoryName)) // trim(mfp%filename) // &
-            &"-" // trim(adjustl(mfp%thickness)) // "/"
+        directoryName = trim(adjustl(directoryName)) // trim(adjustl(mfp%filename)) // "/"
     end function set_directory
 
     subroutine mesh_file_prepare_ave(mfp, directoryName, file, element, u)

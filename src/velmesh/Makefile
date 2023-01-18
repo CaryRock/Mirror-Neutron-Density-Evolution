@@ -5,7 +5,7 @@ vel := build/$(D)/nnp-velmesh
 
 # === Workaround for gfortran -MM -MG -MT bug ==================================
 CF = gfortran
-DFLAGS = -O3 -cpp -Wall -Wextra -pedantic -fimplicit-none -fcheck=all -fbacktrace 
+DFLAGS = -O3 -cpp -Wall -Wextra -pedantic -fimplicit-none -fcheck=all -fbacktrace -fdefault-real-16
 libpath= ../lib
 libobj = $(libpath)/$(wildcard $(libpath)/*.o)
 libmod = $(libpath)/$(wildcard $(libpath)/*.mod)
@@ -15,8 +15,12 @@ ug_obj := $(patsubst %.f90, %.o, $(vel_src))
 default: $(ug_obj)
 
 $(ug_obj): $(patsubst %.o, %.f90, $@)
-	$(CF) $(DFLAGS) -I$(libpath) -c $^
-	$(CF) $(DFLAGS) -I$(libpath) $(libobj) $^ -o nnp-velmesh
+	$(CF) $(DFLAGS) -I$(libpath) -c $(patsubst %.o, %.f90, $@)
+	$(CF) $(DFLAGS) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-velmesh
+
+clean:
+	rm *.o
+	rm ~/nnp-velmesh
 # === Workaround for gfortran -MM -MG -MT bug ==================================
 
 vel: $(vel)

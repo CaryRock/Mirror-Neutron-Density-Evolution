@@ -37,11 +37,11 @@ program stereo_sim
         ! numSteps is the # of desired time steps to take
     !integer                             :: N            
         ! Number of neutron collisions
-    real(8)                             :: Dm, vel, theta0, Vopt, Wsc, Wabs
-    real(8)                             :: thick, A, B, tStep, x, lambda!, ang
-    !complex(8)                          :: i
-    real(8),        dimension(2, 2)     :: rho ! rho is the dens. matrix
-    complex(8),     dimension(2)        :: psi  ! initial n-n' state, e.g.,(1,0)
+    real                                :: Dm, vel, theta0, Vopt, Wsc, Wabs
+    real                                :: thick, A, B, tStep, x, lambda!, ang
+    !complex                             :: i
+    real,           dimension(2, 2)     :: rho ! rho is the dens. matrix
+    complex,        dimension(2)        :: psi  ! initial n-n' state, e.g.,(1,0)
     !character(80),  dimension(3)        :: arg_in
     
     character(prec), dimension(2, 2)    :: rhonn
@@ -55,9 +55,9 @@ program stereo_sim
     logical                             :: only_endpoint, no_scattering
     logical                             :: no_absorption
 
-    real(8), dimension(:, :), allocatable   :: rho_results
-    real(8), dimension(4)                   :: rho_ave, rho_var
-    real(8), dimension(:), allocatable  :: vel_list, Masses, Angles
+    real,    dimension(:, :), allocatable   :: rho_results
+    real,    dimension(4)                   :: rho_ave, rho_var
+    real,    dimension(:), allocatable  :: vel_list, Masses, Angles
 
     type(mesh_file_data)                :: mfp
     character(256)                      :: directoryName
@@ -65,20 +65,20 @@ program stereo_sim
     character(256)                      :: file5, file6, file7, file8
     character(256)                      :: errorlog
 
-    real(8), dimension(:, :), allocatable    :: mesh1
-    real(8), dimension(:, :), allocatable    :: mesh2
-    real(8), dimension(:, :), allocatable    :: mesh3
-    real(8), dimension(:, :), allocatable    :: mesh4
-    real(8), dimension(:, :), allocatable    :: mesh5
-    real(8), dimension(:, :), allocatable    :: mesh6
-    real(8), dimension(:, :), allocatable    :: mesh7
-    real(8), dimension(:, :), allocatable    :: mesh8
+    real,    dimension(:, :), allocatable    :: mesh1
+    real,    dimension(:, :), allocatable    :: mesh2
+    real,    dimension(:, :), allocatable    :: mesh3
+    real,    dimension(:, :), allocatable    :: mesh4
+    real,    dimension(:, :), allocatable    :: mesh5
+    real,    dimension(:, :), allocatable    :: mesh6
+    real,    dimension(:, :), allocatable    :: mesh7
+    real,    dimension(:, :), allocatable    :: mesh8
 ! === End variable declarations ================================================
 
 ! === Begin variable assignments ===============================================
     numSteps    = int(1e3)
-    x           = 0.D0
-    lambda      = 0.D0
+    x           = 0.0
+    lambda      = 0.0
 
     ! This is just for nice formatting
     xChar           = "Global X"
@@ -144,13 +144,13 @@ program stereo_sim
     ! Write each file to a directory of the appropriate mass
     
     call mesh_file_prepare_ave(mfp, directoryname, file1, rhonn(1, 1), 1)
-    call mesh_file_prepare_var(mfp, directoryname, file5, rhonn(1, 1), 5)
-    call mesh_file_prepare_ave(mfp, directoryname, file2, rhonn(1, 2), 2)
-    call mesh_file_prepare_var(mfp, directoryname, file6, rhonn(1, 2), 6)
-    call mesh_file_prepare_ave(mfp, directoryname, file3, rhonn(2, 1), 3)
-    call mesh_file_prepare_var(mfp, directoryname, file7, rhonn(2, 1), 7)
-    call mesh_file_prepare_ave(mfp, directoryname, file4, rhonn(2, 2), 4)
-    call mesh_file_prepare_var(mfp, directoryname, file8, rhonn(2, 2), 8)
+    !call mesh_file_prepare_var(mfp, directoryname, file5, rhonn(1, 1), 5)
+    !call mesh_file_prepare_ave(mfp, directoryname, file2, rhonn(1, 2), 2)
+    !call mesh_file_prepare_var(mfp, directoryname, file6, rhonn(1, 2), 6)
+    !call mesh_file_prepare_ave(mfp, directoryname, file3, rhonn(2, 1), 3)
+    !call mesh_file_prepare_var(mfp, directoryname, file7, rhonn(2, 1), 7)
+    call mesh_file_prepare_ave(mfp, directoryname, file2, rhonn(2, 2), 2)
+    !call mesh_file_prepare_var(mfp, directoryname, file8, rhonn(2, 2), 8)
 
 ! === End initial file I/O =====================================================
 
@@ -169,19 +169,19 @@ program stereo_sim
     ! Private: values of rho_results
     allocate(mesh1(nMasses, nAngles))
     allocate(mesh2(nMasses, nAngles))
-    allocate(mesh3(nMasses, nAngles))
-    allocate(mesh4(nMasses, nAngles))
-    allocate(mesh5(nMasses, nAngles))
-    allocate(mesh6(nMasses, nAngles))
-    allocate(mesh7(nMasses, nAngles))
-    allocate(mesh8(nMasses, nAngles))
+    !allocate(mesh3(nMasses, nAngles))
+    !allocate(mesh4(nMasses, nAngles))
+    !allocate(mesh5(nMasses, nAngles))
+    !allocate(mesh6(nMasses, nAngles))
+    !allocate(mesh7(nMasses, nAngles))
+    !allocate(mesh8(nMasses, nAngles))
 
     !$OMP PARALLEL PRIVATE(Dm, theta0, Vopt, Wsc, Wabs, thick, rho_results, rho_ave, rho_var, i, j, k, l, vel)
     !$OMP DO
 
     do i = 1, nMasses
         do j = 1, nAngles
-            rho_results = 0.D0
+            rho_results = 0.0
             
             do k = 1, num_vels
                 vel = vel_list(k)
@@ -206,12 +206,12 @@ program stereo_sim
             !$OMP CRITICAL
             mesh1(i, j) = rho_ave(1)
             mesh2(i, j) = rho_ave(2)
-            mesh3(i, j) = rho_ave(3)
-            mesh4(i, j) = rho_ave(4)
-            mesh5(i, j) = rho_var(1)
-            mesh6(i, j) = rho_var(2)
-            mesh7(i, j) = rho_var(3)
-            mesh8(i, j) = rho_var(4)
+            !mesh3(i, j) = rho_ave(3)
+            !mesh4(i, j) = rho_ave(4)
+            !mesh5(i, j) = rho_var(1)
+            !mesh6(i, j) = rho_var(2)
+            !mesh7(i, j) = rho_var(3)
+            !mesh8(i, j) = rho_var(4)
             !$OMP END CRITICAL
 !            goto 001
         end do
@@ -228,8 +228,11 @@ program stereo_sim
                         &// "masses.txt", status = "unknown")
     open(unit = 2, file = trim(adjustl(directoryName)) &
                         &// "angles.txt", status = "unknown")
+    open(unit = 3, file = trim(adjustl(directoryName)) &
+                        &// "velocities.txt", status = "unknown")
     write(unit = 1, fmt = 51) "#", "Mass Delta"
     write(unit = 2, fmt = 51) "#", "Angle"
+    write(unit = 3, fmt = 51) "#", "Velocities"
 
     do i = 1, nMasses
         write(unit = 1, fmt = 50) Masses(i)
@@ -241,37 +244,42 @@ program stereo_sim
     end do
     close(unit = 2)
 
+    do i = 1, size(vel_list)
+        write(unit = 3, fmt = 50) vel_list(i) * 100.
+    end do
+    close(unit = 3)
+
     do i = 1, nMasses
         write(unit = 10, fmt = 52) mesh1(i, :)
         write(unit = 20, fmt = 52) mesh2(i, :)
-        write(unit = 30, fmt = 52) mesh3(i, :)
-        write(unit = 40, fmt = 52) mesh4(i, :)
-        write(unit = 50, fmt = 52) mesh5(i, :)
-        write(unit = 60, fmt = 52) mesh6(i, :)
-        write(unit = 70, fmt = 52) mesh7(i, :)
-        write(unit = 80, fmt = 52) mesh8(i, :)
+        !write(unit = 30, fmt = 52) mesh3(i, :)
+        !write(unit = 40, fmt = 52) mesh4(i, :)
+        !write(unit = 50, fmt = 52) mesh5(i, :)
+        !write(unit = 60, fmt = 52) mesh6(i, :)
+        !write(unit = 70, fmt = 52) mesh7(i, :)
+        !write(unit = 80, fmt = 52) mesh8(i, :)
     end do
 
     close(unit = 10)
     close(unit = 20)
-    close(unit = 30)
-    close(unit = 40)
-    close(unit = 50)
-    close(unit = 60)
-    close(unit = 70)
-    close(unit = 80)
+    !close(unit = 30)
+    !close(unit = 40)
+    !close(unit = 50)
+    !close(unit = 60)
+    !close(unit = 70)
+    !close(unit = 80)
 50  format(ES17.8E3)
 52  format(1608ES17.8E3)
 contains
-    real(8) function compute_variance(array) result(var)
+    real function compute_variance(array) result(var)
     ! Use the Two-Pass formulation because dead simple
         implicit none
-        real(8), dimension(:), intent(in)   :: array
-        real(8)                             :: average
+        real,    dimension(:), intent(in)   :: array
+        real                                :: average
         integer                             :: m
 
-        average = 0.D0
-        var     = 0.D0
+        average = 0.0
+        var     = 0.0
 
         average = sum(array) / size(array)
 
@@ -286,12 +294,12 @@ contains
         &B_val, ppsi, rrho, nLines)
         implicit none
         type(materiallist), dimension(:), intent(in)    :: inven
-        real(8)         :: veloc, deltaM, thta0, lmbda, A_val, B_val
+        real            :: veloc, deltaM, thta0, lmbda, A_val, B_val
         integer         :: nSteps, nLines, n!, u
         character(256)  :: errlog
         logical         :: no_sc, no_abs, endpoint_only
-        real(8), dimension(2, 2)    :: rrho
-        complex(8), dimension(2)    :: ppsi
+        real,    dimension(2, 2)    :: rrho
+        complex,    dimension(2)    :: ppsi
 
         do l = 1, nLines
             Vopt    = inven(l)%V    * 1.D-9 ! Given in neV, want eV
@@ -299,7 +307,7 @@ contains
             Wabs    = inven(l)%Wabs * 1.D-9 ! ^; W_abs
             thick   = inven(l)%d    / 100   ! Was given in cm, want in m
 
-            if (veloc .le. 1.D0) then
+            if (veloc .le. 1.0) then
                 open(unit = 99, file = errlog)
                 veloc = 1.
                 write(unit = 99, fmt = *) "One value of veloc set to 1 due to being too small."
@@ -316,12 +324,12 @@ contains
             !ppsi(1)      = 1 - ang
             !ppsi(2)      = ang
             if (endpoint_only) then
-                call exactBanfor(deltaM, veloc, thta0, Vopt, Wsc, Wabs, lmbda, &
-                                &A_val,B_val, thick / veloc, ppsi, rrho)
+                call exactBanfor(deltaM, veloc, thta0, Vopt, Wsc, Wabs, &
+                                &thick / veloc, ppsi, rrho)
             else
                 do 200 n = 1, nSteps
                     call exactBanfor(deltaM, veloc, thta0, Vopt, Wsc, Wabs, &
-                                    &lmbda, A_val, B_val, n*tStep, ppsi, rrho)
+                                    &n*tStep, ppsi, rrho)
                     print *, "TODO: Specify a unit file to write this to, or remove this whole bit."
                     stop
                     write(1, 57) x, n*tStep*veloc, rrho(1, 1), rrho(2, 1), &

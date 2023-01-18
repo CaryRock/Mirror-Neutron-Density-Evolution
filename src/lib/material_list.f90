@@ -2,10 +2,12 @@ module material_list
     implicit none
     type materiallist
         character(32)   :: matName, matRange  ! Cols 1, 3
-            ! cols          2, 4,          5, 6,   7,   8,    9,      10,  
-        real        ::   d, numDensity, V, Wth, Wsc, Wabs, sigabs, sigel
-            ! cols          11       12
-        real        ::   elscatl, abslngth
+            ! cols          2, 4,          5, 6,   7,   8,    9,     
+        real            ::  d, numDensity, V, Wth, Wsc, Wabs, sigabs
+            ! cols          10,      11,      12,
+        real            ::  sigel, elscatl, abslngth
+            ! cols            13
+        integer         ::  steps
     end type materiallist
 
 contains
@@ -44,6 +46,50 @@ contains
     end function get_lines
 ! === get_lines ================================================================
 
+! === get_num_masses ===========================================================
+    integer function get_num_masses(INFILE_4) result(nMasses)
+        implicit none
+        character(64), intent(in)   :: INFILE_4
+        character(256)              :: line
+        integer                     :: error
+
+        nMasses = 0
+        error = 0
+
+        open(unit = 1, file = trim(adjustl(INFILE_4)), status = "old")
+        do while(error == 0)
+            nMasses = nMasses + 1
+            read(1, *, iostat = error) line
+        end do
+        close(1)
+
+        nMasses = nMasses - 1   ! Overcounting
+        return
+    end function get_num_masses
+! === get_num_masses ===========================================================
+
+! === get_num_angles ===========================================================
+    integer function get_num_angles(INFILE_5) result(nAngles)
+        implicit none
+        character(64), intent(in)   :: INFILE_5
+        character(256)              :: line
+        integer                     :: error
+
+        nAngles = 0
+        error = 0
+
+        open(unit = 1, file = trim(adjustl(INFILE_5)), status = "old")
+        do while(error == 0)
+            nAngles = nAngles + 1
+            read(1, *, iostat = error) line
+        end do
+        close(1)
+
+        nAngles = nAngles - 1   ! Overcounting
+        return
+    end function get_num_angles
+! === get_num_angles ===========================================================
+
 ! === get_vel_lines ============================================================
     integer function get_vel_lines(INFILE_3) result(nlines)
         implicit none
@@ -67,9 +113,9 @@ contains
 
     subroutine get_velocities(INFILE_3, num_vels, vel_list)
         implicit none
-        character(64), intent(in)   :: INFILE_3
+        character(64), intent(in):: INFILE_3
         real, dimension(:)       :: vel_list
-        integer                     :: num_vels, l, error
+        integer                  :: num_vels, l, error
 
         error = 0
         open(unit = 1, file = trim(INFILE_3), status = "old")
@@ -113,18 +159,16 @@ contains
         do 100 n = 1, nlines
             read(1, *, iostat = error) inventory(n)%matName, &
                 &inventory(n)%d, inventory(n)%matRange, &
-                &inventory(n)%numDensity, inventory(n)%V, inventory(n)%Wth, &
-                &inventory(n)%Wsc, inventory(n)%Wabs, inventory(n)%sigabs, &
-                &inventory(n)%sigel, inventory(n)%elscatl, inventory(n)%abslngth
+                &inventory(n)%numDensity, inventory(n)%V, &
+                &inventory(n)%Wth, inventory(n)%Wsc, inventory(n)%Wabs,&
+                &inventory(n)%sigabs, inventory(n)%sigel, &
+                &inventory(n)%elscatl, inventory(n)%abslngth, &
+                &inventory(n)%steps
             ! Not all of the above are useful - some are only there for ease
             ! of file reading because kludging gets the job done-ing
-                if (skip_Wsc .eqv. .true.) then
-                    inventory(n)%Wsc = 0.D0
-                end if
+            if (skip_Wsc .eqv. .true.) inventory(n)%Wsc = 0.0
 
-                if (skip_Wabs .eqv. .true.) then
-                    inventory(n)%Wsc = 0.D0
-                end if
+            if (skip_Wabs .eqv. .true.) inventory(n)%Wsc = 0.0
 100     end do
         
         close(1)

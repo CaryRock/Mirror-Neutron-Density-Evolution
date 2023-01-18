@@ -33,25 +33,24 @@ program step
     real, dimension(2, 2)            :: rho
     real, dimension(:,:), allocatable:: rho_n_result, rho_m_result
     real, dimension(2, 2), parameter :: rhoN = &
-                        &reshape((/1.D0, 0.D0, 0.D0, 0.D0/), shape(rho))
+                        &reshape((/1.0, 0.0, 0.0, 0.0/), shape(rho))
     real, dimension(2, 2), parameter :: rhoM = &
-                        &reshape((/0.D0, 0.D0, 0.D0, 1.D0/), shape(rho))
+                        &reshape((/0.0, 0.0, 0.0, 1.0/), shape(rho))
     real, dimension(:, :), allocatable   :: meshNavg, meshMavg
     real, dimension(:, :), allocatable   :: meshNvar, meshMvar
 
     ! Dimension is basically nMasses rows x nAngles columns, by 
     ! 4 "layers" (<rho_11>, <rho_22>, var(rho_11), var(rho_22)) 
     real, dimension(:), allocatable  :: vel_list, Masses, Angles
-    real, dimension(:), allocatable  :: PNvels, PMVels, P1, P2, P3
-    real, dimension(:), allocatable  :: P4, PN, PM
-
+    real, dimension(4)  :: O, P
+    real                :: PNvels, PMvels, PN, PM
 
     ! Reals
-    real :: dlina, Dm, theta0, vel, Vopt, Wabs, A, B, tStep, xStep
+    real :: dlina, Dm, theta0, vel, Vopt, Wsc, Wabs, A, B, tStep, xStep
     real :: x, lambda, Navg, Nvar, Mavg, Mvar
 
     ! Integers
-    integer :: i, j, k, l, numSteps, num_lines, nMasses, nAngles, nVels
+    integer :: i, j, k, l, m, numSteps, num_lines, nMasses, nAngles, nVels
     integer :: kmin, kmax
     !$ integer  :: num_vels_to_run
 
@@ -108,7 +107,7 @@ program step
     
     call get_vel_params(INFILE_2, INFILE_4, INFILE_5, inventory, psi, &
                     &filename, num_lines, only_endpoint, no_scattering, &
-                    &no_absorption, Masses, Angles, nMasses, nAngles)
+                    &no_absorption, Masses, Angles, nMasses, nAngles, nVels)
     nVels = get_vel_lines(INFILE_3)
 
 ! TODO: Make this either a command-line parameter or the like to be able to manage
@@ -119,9 +118,9 @@ program step
     call get_velocities(INFILE_3, nVels, vel_list)
 
     if (psi(1) .eq. cmplx(1.0, 0.0)) then
-        N_initial = 1
+        N_initial = .true.
     else if (psi(2) .eq. cmplx(1.0, 0.0)) then
-        N_initial = 0
+        N_initial = .false.
     else
         print *, "Psi    = ", psi
         print *, "Psi(1) = ", psi(1)
@@ -132,12 +131,11 @@ program step
     end if
 
 
-    nVels = 100 ! Controls how many values of the velocity to average over, not
+    nVels = 1000! Controls how many values of the velocity to average over, not
                 ! how many velocities there are total
     
-    ! Allocate the P_i arrays
-    allocate(PNvels(nVels))
-    allocate(PMvels(nVels))
+    PNvels = 0.0
+    PMvels = 0.0
 
     write( thickness, f58 ) sum(inventory%d)
     !print *, "thickness: ", thickness
@@ -158,95 +156,98 @@ program step
 !    allocate(meshNvar(nMasses, nAngles))
 !    allocate(meshMvar(nMasses, nAngles))
 
+    Wsc  = 0.0
     Vopt = inventory(1)%V    * 1.E-9
     Wabs = inventory(1)%Wabs * 1.E-9
-    numSteps = 124
-    allocate(P1(numSteps))
-    allocate(P2(numSteps))
-    allocate(P3(numSteps))
-    allocate(P4(numSteps))
-    allocate(PN(numSteps))
-    allocate(PM(numSteps))
+    numSteps = inventory(1)%steps
+    
     print *, ""
     print *, "Warning! This program has a fixed number of steps! It is &
         &only intended to be run for D2O at the moment!"
     print *, "Number of steps: ", numSteps
     print *, ""
-    dlina = inventory(1)%d / 100
-    
-    lambda = 0.0
-    A = 0.0
-    B = 0.0
-    x = 0.0
+    dlina = inventory(1)%elscatl / 100    ! Distance in m
 
     rho = rhoN
     
     !!$set_num_threads(16)
 
-    !$OMP PARALLEL DO Private(i, j, k, kmin, kmax, vel, Dm, theta0, tstep, &
-    !$OMP& rho, psi, PN, PM, P1, P2, P3, P4, PNvels, PMvels, Navg, Mavg) !&
-    !!$OMP& meshNavg, meshMavg)
+    !$OMP PARALLEL DO Private(i, j, k, kmin, kmax, vel, Dm, theta0, &
+    !$OMP& tStep, rho, psi, PN, PM, O, P, PNvels, PMvels, Navg, Mavg)
     do i = 1, nMasses
+        Dm = Masses(i)
+
         do j = 1, nAngles
-            !rho_n_result = 0.0
-            !rho_m_result = 0.0
+            theta0 = Angles(j)
+
+            PNvels = 0.0
+            PMvels = 0.0
+
+            O = 0.0
+            P = 0.0
+            PN= 1.0
+            PM= 0.0
 
             !kmin = 1 + (i - 1) * nAngles * nVels
             kmin = 1
             !kmax = i * nAngles * nVels
             kmax = nVels
             !if (i .eq. nMasses .and. j .eq. nAngles) kmax = kmin + nVels - 1
-            do k = kmin, kmax
-                !vel = vel_list(k) * 100
-                vel = 100 * vel_list((i - 1) * nAngles * nVels + (j - 1) * nVels + k)
-                Dm = Masses(i)
-                theta0 = Angles(j)
+vels:       do k = kmin, kmax
+              ! velocity in m/s
+              !vel = vel_list((i - 1) * nAngles * nVels + (j - 1) * nVels + k)
+              vel = vel_list(k)
+              tStep = dlina / numSteps / vel
 
-                tStep= dlina / vel  ! Time step size
-                !xStep= dlina / numSteps ! Spatial step size
+              rho = rhoM
+              psi = psiM
+              call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, tStep,&
+                &psi, rho)
+              O(3) = rho(1, 1)
+              O(4) = rho(2, 2)
 
-                ! Initial value for PN and PM need to be computed
-                rho = rhoN
-                psi = psiN
+              rho = rhoN
+              psi = psiN
+              call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, tStep,&
+                &psi, rho)
+              O(1) = rho(1, 1)
+              O(2) = rho(2, 2)
+              
+              !P(1) = PN * O(1)
+              !P(2) = PN * O(2)
+              !P(3) = 0.0!PM * O(3)
+              !P(4) = 0.0!PM * O(4)
 
-                call exactBanfor(Dm, vel, theta0, Vopt, 0.0, Wabs, &
-                    &lambda, A, B, tStep, psi, rho)
-                
-                PN(1) = rho(1, 1)
-                PM(1) = rho(2, 2)
+              PN = rho(1, 1)!O(1)
+              PM = rho(2, 2)!O(2)
 
-                ! Call a subroutine to handle the details of computing the 
-                ! probabilities
-                !
-                ! rhoN, rhoM, psiN, psiM are constant arrays
-                ! rho and psi are the ones that update
-                ! Dm theta0, vel, tStep, Vopt, Wabs are all reals
-                ! P1-4, PN, and PM are arrays corresponding to a single velocity
+              if (numSteps .gt. 1) then
+                PN = rho(1, 1)
+                PM = rho(2, 2)
 
-                ! Iteration inside should only range over all but the first
-                ! indices of PN and PM (to account for PNprev and PMprev)
-                call compute_probabilities(rho, rhoN, rhoM, psi, psiN, &
-                    &psiM, Dm, theta0, vel, tStep, Vopt, Wabs, numSteps, P1, P2, &
-                    &P3, P4, PN, PM, N_initial)
-                
-                ! Store computed values in a holding variable/array
-                PNvels(k) = PN(numSteps)
-                PMvels(k) = PM(numSteps)
-            end do
+matSteps:       do l = 2, numSteps
+                  !PN = rho(1, 1)
+                  !PM = rho(2, 2)
 
-            ! Compute the average and variance in the PNvels and PMvels
-            Navg = sum(PNvels) / nVels
-            Mavg = sum(PMvels) / nVels
-            !Nvar = compute_variance(PNvels)
-            !Mvar = compute_variance(PMvels)
+                  P(1) = PN * O(1)
+                  P(2) = PN * O(2)
+                  P(3) = PM * O(3)
+                  P(4) = PM * O(4)
+                  PN = P(1) + P(3)
+                  PM = P(2) + P(4)
+                end do matSteps
+              end if
 
-            ! These values should be assigned to corresponding mesh arrays
-            meshNavg(i, j) = Navg
-            meshMavg(i, j) = Mavg
-            !meshNvar(i, j) = Nvar
-            !meshMvar(i, j) = Mvar
+!              PN = P(1) + P(3)
+!              PM = P(2) + P(4)
 
-!            k = k + 1
+              PNvels = PNvels + PN
+              PMvels = PMvels + PM
+            end do vels
+
+            ! Assign to the corresponding mesh arrays
+            meshNavg(i, j) = PNvels / nVels
+            meshMavg(i, j) = PMvels / nVels
         end do
     end do
     !$OMP END PARALLEL DO
@@ -274,123 +275,22 @@ program step
     end do
     close(unit = 2)
 
-    do i = 1, size(vel_list)
-        write(unit = 3, fmt = 50) vel_list(i) * 100.
+    do i = 1, nVels
+        write(unit = 3, fmt = 50) vel_list(i)
     end do
     close(unit = 3)
     
     do i = 1, nMasses
         write(unit = 10, fmt = 52) meshNavg(i, :)
         write(unit = 20, fmt = 52) meshMavg(i, :)
-!        write(unit = 30, fmt = 52) meshNvar(i, :)
-!        write(unit = 40, fmt = 52) meshMvar(i, :)
     end do
 
     close(unit = 10)
     close(unit = 20)
-!    close(unit = 30)
-!    close(unit = 40)
 
 
 50  format(ES17.8E3)
 51  format(A1, A15)
 52  format(1608ES17.8E3)
-!52  format(2941ES17.8E3)
-
-contains
-    real function computeP_i(P_A, rhojj) result(P_i)
-        implicit none
-        real, intent(in) :: P_A, rhojj
-        P_i = P_a * rhojj
-        return
-    end function computeP_i
-
-    real function computeP_NM(P_a, P_b, rhojj_N, rhojj_M) result(P_NM)
-        implicit none
-        real, intent(in) :: P_a, P_b, rhojj_N, rhojj_M
-        P_NM = P_a * rhojj_N + P_b * rhojj_M
-        return
-    end function computeP_NM
-
-    subroutine compute_probabilities(rrho, rrhoN, rrhoM, ppsi, ppsiN, &
-        &ppsiM, DDm, ttheta0, vvel, ttStep, VVopt, WWabs, nnumSteps, &
-        &PP1, PP2, PP3, PP4, PPN, PPM, reset)
-        implicit none
-        real, dimension(2, 2), intent(in)    :: rrhoN, rrhoM
-        real, dimension(2, 2)                :: rrho
-        complex, dimension(2), intent(in)    :: ppsiN, ppsiM
-        complex, dimension(2)                :: ppsi
-        real, intent(in)     :: DDm, ttheta0, vvel, ttStep, VVopt, WWabs
-        real, dimension(:)   :: PP1, PP2, PP3, PP4, PPN, PPM
-        integer, intent(in)  :: nnumSteps
-
-        logical, intent(in)  :: reset
-        real, dimension(2, 2):: resetRho
-        complex, dimension(2):: resetPsi
-
-        real                 :: AA, BB, llambda
-        integer              :: ii
-
-        ! Reset rho and psi, just to make sure
-        if (reset .eqv. .true.) then
-            resetRho = rrhoN
-            resetPsi = ppsiN
-        else
-            resetRho = rrhoM
-            resetPsi = ppsiM
-        end if
-
-        rrho = resetRho
-        ppsi = resetPsi
-
-        AA = 0.D0
-        BB = 0.D0
-        llambda = 0.D0
-
-        ! Obtain first element of PN and PM
-        PPN(1) = rrho(1, 1)
-        PPM(1) = rrho(2, 2)
-
-        do 101 ii = 2, nnumSteps
-            ! Reset rho and psi for use
-            rrho = resetRho
-            ppsi = resetPsi
-
-            ! Iterate over the probability arrays
-            call exactBanfor(DDm, vvel, ttheta0, VVopt, 0.D0, WWabs, AA, &
-                &BB, llambda, ttStep, ppsi, rrho)
-
-            PP1(ii) = PPN(ii - 1) * rrho(1, 1)
-            PP2(ii) = PPN(ii - 1) * rrho(2, 2)
-            PP3(ii) = PPM(ii - 1) * rrho(1, 1)
-            PP4(ii) = PPM(ii - 1) * rrho(2, 2)
-
-            PPN(ii) = PP1(ii) + PP3(ii)
-            PPM(ii) = PP2(ii) + PP4(ii)
-            
-            !print *, "PPN(ii - 1): ", PPN(ii - 1)
-            !print *, "    PPN(II): ", PPN(ii)
-101     end do
-        return
-    end subroutine compute_probabilities
-
-    real function compute_variance(array) result(var)
-        implicit none
-        real, dimension(:), intent(in)   :: array
-        real :: ave
-        integer :: s, m
-
-        ave = 0.D0
-        var = 0.D0
-        s = size(array)
-
-        ave = sum(array) / s
-
-        do m = 1, s
-            var = var + (array(m) - ave)**2
-        end do
-
-        var = var / (s - 1)
-        return
-    end function compute_variance
+    stop
 end program step

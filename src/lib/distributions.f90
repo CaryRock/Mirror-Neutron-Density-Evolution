@@ -70,4 +70,49 @@ contains
         sampled = velocities(index)
         
     end function sample_MBDist
+
+    recursive subroutine YK_MAXW(TSOUR, V)
+      implicit none
+      real, parameter :: AK2M = 1.648656E4
+      real, parameter :: AK3M = 2.472984E4
+
+      real, intent(in):: TSOUR
+      real            :: V, VPFT, TEMPE, V3MP2, V2MP2, A, AF, AMAX, VMP
+      real            :: random
+
+      VPFT = 6637.43        ! For 342 K thermal source
+
+      if (TSOUR .lt. 273.15) VPFT = 1.E8  ! For colder source
+!     VPFT - m/s - two regions of thermal flux parameterization
+
+!     If the temperature of the source is constant:
+      TEMPE = TSOUR
+!     Temperature is a radial function:
+!     (for cold source) NOT INITIATED
+!     REMIS = sqrt(X0*X0 + Y0*Y0)
+!     TEMPE = TVSR(REMIS)   ! TVSR isn't in the CERNLIB documentation.
+
+!     V3MP2 - most probably velocity, squared - (m/s)^2
+      V3MP2 = AK3M * TEMPE
+      V2MP2 = AK2M * TEMPE
+      VMP = sqrt(V3MP2)
+      AMAX = 45000. * exp(-1.5)/VMP
+
+      ! Start sampling the distribution
+      AF = 1.0
+      A = 10.0
+      do while(A .gt. AF)
+        call random_number(random)
+        V = 10. * VMP * random
+        call random_number(random)
+        A = AMAX * random
+        if (V .lt. VPFT) then
+          AF = 20000. * exp(-V * V / V2MP2) * V * V * V / (V2MP2 * V2MP2)
+        else
+          AF = 493.597 / V
+        end if
+      end do
+
+      return
+    end subroutine YK_MAXW
 end module distributions

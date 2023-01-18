@@ -5,7 +5,7 @@ step := build/$(D)/nnp-step
 
 # === Manual commands ==========================================================
 CF = gfortran
-DFLAGS = -Og -cpp -Wall -Wextra -pedantic -fcheck=all -fbacktrace -fimplicit-none -fdefault-real-16 -fopenmp
+DFLAGS = -g -cpp -Wall -Wextra -pedantic -fcheck=all -fbacktrace -fimplicit-none -Wno-unused-variable -Wno-compare-reals -Wno-unused-function -fdefault-real-8
 libpath= ../lib
 libobj = $(libpath)/$(wildcard $(libpath)/*.o)
 libmod = $(libpath)/$(wildcard $(libpath)/*.mod)
@@ -19,8 +19,8 @@ $(ug_obj): $(patsubst %.o, %.f90, $@)
 	$(CF) $(DFLAGS) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-step
 
 clean:
-	rm ~/nnp-step
 	rm *.o
+	rm ~/nnp-step
 # === Manual commands ==========================================================
 
 step: $(step)
