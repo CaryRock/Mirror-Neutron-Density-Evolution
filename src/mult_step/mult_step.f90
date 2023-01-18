@@ -168,6 +168,7 @@ program mult_step
 
     Wsc = 0.0
     temp = 342.0
+
 !          # Mtrl MtrlThck G.Dist PN PM
     print '(A2, A35, A28, A30, A30, A27)', "# ", header(2), header(3), header(4), header(5), header(6)
     print *, adjustl(header(1)), ",", 20.0, ",", 20.0,",", 1.0,",", 0.0
@@ -239,11 +240,11 @@ mtrlLoop:       do l = 1, nMaterials
                     P(2) = PN * O(2)
                     P(3) = 0.0!PM * O(3)
                     P(4) = 0.0!PM * O(4)
-                  else
-                    P(1) = PN * O(1)
-                    P(2) = PN * O(2)
-                    P(3) = PM * O(3)
-                    P(4) = PM * O(4)
+                  !else
+                    !P(1) = PN * O(1)
+                    !P(2) = PN * O(2)
+                    !P(3) = PM * O(3)
+                    !P(4) = PM * O(4)
                   end if
 
 matSteps:         do m = 1, numSteps
@@ -279,22 +280,22 @@ matSteps:         do m = 1, numSteps
                   if (i .eq. nMasses .and. j .eq. nAngles .and. k .eq. nVels ) then
                     x = x + inventory(l)%d
                     print *, inventory(l)%matName, ",",inventory(l)%d, ",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
-                    write(10, *) inventory(l)%matName, ",",inventory(l)%d, ",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
+                    write(11, *) inventory(l)%matName, ",",inventory(l)%d, ",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
                     if (l .eq. nMaterials) then
                       print *, ""
-                      write(10, *) ""
+                      write(11, *) ""
                       print *, "dM (eV), theta (rad), vel (m/s), numSteps: ", Dm, theta0, vel, numSteps
-                      write(10, *) "dM (eV), theta (rad), vel (m/s), numSteps: ", Dm, theta0, vel, numSteps
+                      write(11, *) "dM (eV), theta (rad), vel (m/s), numSteps: ", Dm, theta0, vel, numSteps
                       print *, "# velocities averaged over: ", nVels
-                      write(10, *) "# velocities averaged over: ", nVels
+                      write(11, *) "# velocities averaged over: ", nVels
                       print *, "Average velocity: ", vAvg
-                      write(10, *) "Average velocity: ", vAvg
+                      write(11, *) "Average velocity: ", vAvg
                       print *, "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
-                      write(10, *) "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
+                      write(11, *) "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
                       print *, "O: ", O
-                      write(10, *) "O: ", O
+                      write(11, *) "O: ", O
                       print *, "numSteps: ", numSteps
-                      write(10, *) "numSteps: ", numSteps
+                      write(11, *) "numSteps: ", numSteps
                       print *, ""
                     end if
                   end if
@@ -313,6 +314,11 @@ matSteps:         do m = 1, numSteps
     !$OMP END PARALLEL DO
 
 ! === Begin File Writing and Output ============================================
+
+    ! Generate a random velocity list
+    do k = 1, nVels
+      call YK_MAXW(temp, vel_list(k))
+    end do
 
     open(unit = 1, file = trim(adjustl(directoryName)) &
         &// "masses.txt", status = "unknown")
@@ -335,7 +341,7 @@ matSteps:         do m = 1, numSteps
     close(unit = 2)
 
     do i = 1, size(vel_list)
-!        write(unit = 3, fmt = 50) vel_list(i) * 100.
+        write(unit = 3, fmt = 50) vel_list(i)
     end do
     close(unit = 3)
 
