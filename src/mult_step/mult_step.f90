@@ -35,12 +35,12 @@ program mult_step
 !        &(/ cmplx(0.0, 0.0), cmplx(1.0, 0.0) /)
     complex, dimension(2):: psi
 
-    real, dimension(2, 2)               :: rho
+    real, dimension(2, 2)               :: rho, rhoReset
     real, dimension(:,:),allocatable    :: rho_n_result, rho_m_result
     real, dimension(2, 2), parameter    :: rhoN = &
         &reshape((/1.0, 0.0, 0.0, 0.0/), shape(rho))
-!    real, dimension(2, 2), parameter    :: rhoM = &
-!        &reshape((/0.0, 0.0, 0.0, 1.0/), shape(rho))
+    real, dimension(2, 2), parameter    :: rhoM = &
+        &reshape((/0.0, 0.0, 0.0, 1.0/), shape(rho))
     real, dimension(:, :), allocatable  :: meshNavg, meshMavg
     real, dimension(:, :), allocatable  :: meshNvar, meshMvar
     
@@ -122,8 +122,10 @@ program mult_step
 
     if (psi(1) .eq. cmplx(1.0, 0.0)) then
         N_initial = .true.
+        rhoReset = rhoN
     else if (psi(2) .eq. cmplx(1.0, 0.0)) then
         N_initial = .false.
+        rhoReset = rhoM
     else
         print *, "Psi    = ", psi
         print *, "Currently, this program cannot handle initial mixed states."
@@ -225,8 +227,9 @@ mtrlLoop:       do l = 1, nMaterials
                   Wabs = inventory(l)%Wabs  * 1.E-9 ! eV
                     
 ! Set-up probabilities for initially starting as a neutron
-                  rho = rhoN
+                  !rho = rhoN
                   !psi = psiN
+                  rho = rhoReset
                   call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, &
                     &tStep, psi, rho)
                   O(1) = rho(1, 1)

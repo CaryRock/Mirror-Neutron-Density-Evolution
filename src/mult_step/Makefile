@@ -13,10 +13,10 @@ libpath= ../lib
 libobj = $(libpath)/$(wildcard $(libpath)/*.o)
 libmod = $(libpath)/$(wildcard $(libpath)/*.mod)
 
-ug_obj := $(patsubst %.f90, %.o, $(mult_step_src))
+#ug_obj := $(patsubst %.f90, %.o, $(mult_step_src))
 ug_obj_par := $(patsubst %.f90, %.o, $(mult_step_src))
 
-serial: $(ug_obj)
+#serial: $(ug_obj)
 
 parallel: $(ug_obj_par)
 
