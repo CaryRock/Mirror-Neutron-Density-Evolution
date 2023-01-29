@@ -267,11 +267,9 @@ contains
                     skip_Wsc = .true.   ! DO exclude W_scattering
 
                 case("m")   ! option -m --mass
-                    m_opt = .true. ! m mandataory if not using parameter.list
                     if(isnum(trim(optarg)) > 0) then ! Check for a number in "optarg"
-                        !print *, "In mass: " // optarg
-                        !read(optarg, *) mass
-                        INFILE_4 = trim(optarg)
+                        m_opt = .true. 
+                        INFILE_4 = trim(adjustl(optarg))
                     !else
                     !    print *, trim(optarg)
                     !    print *, "ERROR: Option -m or --mass needs to be the &
@@ -280,16 +278,9 @@ contains
                     end if
 
                 case("t")   ! option -t --theta
-                    t_opt = .true.  ! t required if using m/not using parameter.list
                     if(isnum(trim(optarg)) > 0) then    ! Check for a number in "optarg"
-                        !print *, "In theta: " // optarg
-                        !read(optarg, *) angle
-                        INFILE_5 = trim(optarg)
-                    !else
-                    !    print *, trim(optarg)
-                    !    print *, "ERROR: Option -t or --theta needs to be the &
-                    !    &file containing the list of masses to iterate over."
-                    !    STOP
+                        t_opt = .true. 
+                        INFILE_5 = trim(adjustl(optarg))
                     end if
 
                 case("L")   ! option -L --material
@@ -326,13 +317,12 @@ contains
                         "   -A  --skip_Wabs     Set absorption potential = 0",&
                         "   -c  --skip_Wsc      Set scattering potential = 0",&
                         "   -L  --material      Location of inventory file",&
-! TODO: Update -m, -t,   "   -m  --mass          Mass difference between n and &
-!       and -V to be         &n'. Input a value between between 10 neV. &
-!       pointers to          &and 10 keV (in eV)",&
-!       relevant files.  "   -t  --theta angle   Desired mixing angle (in &
-!                            &radians). Angles > pi/4 will be set to pi/4",&
-!                        "   -V  --velocity      Velocity of initial &
-!                            &particles.",&
+                        "   -m  --mass          Location of file listing &
+                            &the masses to use in a calculation.",&
+                        "   -t  --theta         Location of the file listing &
+                            &the angles to use in a calculation.",&
+                        "   -V  --velocity      Number of velocity &
+                            &samples to use",&
                         "   -h  --help          Print this help screen",&
                         "   -v  --version       Print version information"
                         
@@ -362,6 +352,14 @@ contains
 !            STOP
 !        end if
         
+        if (.not. m_opt) then 
+          INFILE_4 = "deltaMs"
+        end if
+
+        if (.not. t_opt) then
+          INFILE_5 = "thetas"
+        end if
+
         if (N_opt .and. MN_opt) then
             print *, "Please specify the initial starting state as being either&
             &purely neutron ('N') or purely mirror neutron ('M'). It makes no &

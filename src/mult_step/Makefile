@@ -5,7 +5,7 @@ step := build/$(D)/nnp-step
 
 # === Manual commands ==========================================================
 CF = gfortran
-DFLAGS = -march=x86-64 -g -cpp -Wall -Wextra -pedantic -fcheck=all -fbacktrace -fimplicit-none -Wno-unused-variable -Wno-compare-reals -Wno-unused-function -fdefault-real-8
+DFLAGS = -march=x86-64 -O3 -cpp -Wall -Wextra -pedantic -fcheck=all -fbacktrace -fimplicit-none -Wno-unused-variable -Wno-compare-reals -Wno-unused-function -fdefault-real-8
 
 DPARALLEL := -fopenmp $(DFLAGS)
 

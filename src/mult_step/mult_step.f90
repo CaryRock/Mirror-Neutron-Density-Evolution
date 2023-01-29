@@ -99,8 +99,8 @@ program mult_step
     !INFILE_1 = "parameter.list"
     INFILE_2 = "material.list"
     INFILE_3 = "velocity.list"
-    INFILE_4 = "deltaMs"
-    INFILE_5 = "thetas"
+    !INFILE_4 = "deltaMs"
+    !INFILE_5 = "thetas"
 
     errorlog = "error-" // uuid // ".log"
 
@@ -158,7 +158,7 @@ program mult_step
     totSteps = sum(inventory%steps)
 
     x   = 0.0
-    rho = rhoN
+    rho = rhoReset
     vAvg = 0.0
 
     header(1) = "Core"
@@ -193,15 +193,6 @@ anglLoop:   do j = 1, nAngles
             vAvg = vAvg + sum(vel_list)
             vAvg = vAvg / nVels
             
-            if (i .eq. nMasses) then
-              !print *, "Using vels for i = 1: "
-              do k = 1, nVels
-              !  print *, vel_list(j)
-                write(150, *) vel_list(k)
-              end do
-              !print *, ""
-            end if
-            
             !O       = 0.0
             !P       = 0.0
             !PN      = 1.0
@@ -216,8 +207,7 @@ velsLoop:   do k = 1, nVels!kmin, kmax
                 x = 20.0  ! Global Coordinate, cm
 
                 vel = vel_list(k) ! m/s
-                psi = psiN
-                rho = rhoN
+                rho = rhoReset
 
 mtrlLoop:       do l = 1, nMaterials
                   numSteps = inventory(l)%steps
@@ -227,8 +217,6 @@ mtrlLoop:       do l = 1, nMaterials
                   Wabs = inventory(l)%Wabs  * 1.E-9 ! eV
                     
 ! Set-up probabilities for initially starting as a neutron
-                  !rho = rhoN
-                  !psi = psiN
                   rho = rhoReset
                   call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, &
                     &tStep, psi, rho)
@@ -237,18 +225,35 @@ mtrlLoop:       do l = 1, nMaterials
                   O(3) = rho(2, 1)
                   O(4) = rho(2, 2)
 
-
                   if (l .eq. 1) then
-                    P(1) = PN * O(1)
-                    P(2) = PN * O(2)
-                    P(3) = 0.0!PM * O(3)
-                    P(4) = 0.0!PM * O(4)
+                    if (N_initial) then
+                      P(1) = PN * O(1)
+                      P(2) = PN * O(2)
+                      P(3) = 0.0!PM * O(3)
+                      P(4) = 0.0!PM * O(4)
+                    else
+                      P(1) = 0.0
+                      P(2) = 0.0
+                      P(3) = PM * O(3)
+                      P(4) = PM * O(4)
+                    end if
                   !else
                     !P(1) = PN * O(1)
                     !P(2) = PN * O(2)
                     !P(3) = PM * O(3)
                     !P(4) = PM * O(4)
                   end if
+                  
+                  !!$OMP CRITICAL
+                  !print *, "theta0  : ", theta0
+                  !print *, "dm      : ", Dm
+                  !print *, "vel     : ", vel
+                  !print *, "tStep   : ", tStep
+                  !print *, "O       : ", O
+                  !print *, "rhoReset: ", rhoReset
+                  !print *, ""
+                  !stop
+                  !!$OMP END CRITICAL
 
 matSteps:         do m = 1, numSteps
                     PN = P(1) + P(3)
@@ -279,27 +284,63 @@ matSteps:         do m = 1, numSteps
                   !  stop
                   !end if
 !
+                  ! angles(101) = 0.001, mass(47) = 199.5...E-9 eV, mass(55) = 501.2...E-9 eV
+                  !if (i .eq. nMasses .and. j .eq. 101 .and. k .eq. nVels ) then
+                  if (j .eq. 101) then
+                    if (k .eq. nVels) then
+                      if (i .eq. 47) then
+                        x = x + inventory(l)%d
+                        print *, inventory(l)%matName, ",",inventory(l)%d, ",",&
+                          &x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
+                        write(11, *) inventory(l)%matName, ",",inventory(l)%d, &
+                          &",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
+                        if (l .eq. nMaterials) then
+                          print *, ""
+                          write(11, *) ""
+                          print *, "dM (eV), theta (rad), vel (m/s), numSteps: ",&
+                            &Dm, theta0, vel, numSteps
+                          write(11, *) "dM (eV), theta (rad), vel (m/s), numSteps: ", &
+                            &Dm, theta0, vel, numSteps
+                          print *, "# velocities averaged over: ", nVels
+                          write(11, *) "# velocities averaged over: ", nVels
+                          print *, "Average velocity: ", vAvg
+                          write(11, *) "Average velocity: ", vAvg
+                          print *, "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
+                          write(11, *) "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
+                          print *, "O: ", O
+                          write(11, *) "O: ", O
+                          print *, "numSteps: ", numSteps
+                          write(11, *) "numSteps: ", numSteps
+                          print *, ""
+                        end if
+                      end if
 
-                  if (i .eq. nMasses .and. j .eq. nAngles .and. k .eq. nVels ) then
-                    x = x + inventory(l)%d
-                    print *, inventory(l)%matName, ",",inventory(l)%d, ",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
-                    write(11, *) inventory(l)%matName, ",",inventory(l)%d, ",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
-                    if (l .eq. nMaterials) then
-                      print *, ""
-                      write(11, *) ""
-                      print *, "dM (eV), theta (rad), vel (m/s), numSteps: ", Dm, theta0, vel, numSteps
-                      write(11, *) "dM (eV), theta (rad), vel (m/s), numSteps: ", Dm, theta0, vel, numSteps
-                      print *, "# velocities averaged over: ", nVels
-                      write(11, *) "# velocities averaged over: ", nVels
-                      print *, "Average velocity: ", vAvg
-                      write(11, *) "Average velocity: ", vAvg
-                      print *, "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
-                      write(11, *) "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
-                      print *, "O: ", O
-                      write(11, *) "O: ", O
-                      print *, "numSteps: ", numSteps
-                      write(11, *) "numSteps: ", numSteps
-                      print *, ""
+                      if (i .eq. 55) then
+                        x = x + inventory(l)%d
+                        print *, inventory(l)%matName, ",",inventory(l)%d, ",", &
+                          &x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
+                        write(12, *) inventory(l)%matName, ",",inventory(l)%d, &
+                          &",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
+                        if (l .eq. nMaterials) then
+                          print *, ""
+                          write(12, *) ""
+                          print *, "dM (eV), theta (rad), vel (m/s), numSteps: ", &
+                            &Dm, theta0, vel, numSteps
+                          write(12, *) "dM (eV), theta (rad), vel (m/s), numSteps: ", &
+                            &Dm, theta0, vel, numSteps
+                          print *, "# velocities averaged over: ", nVels
+                          write(12, *) "# velocities averaged over: ", nVels
+                          print *, "Average velocity: ", vAvg
+                          write(12, *) "Average velocity: ", vAvg
+                          print *, "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
+                          write(12, *) "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
+                          print *, "O: ", O
+                          write(12, *) "O: ", O
+                          print *, "numSteps: ", numSteps
+                          write(12, *) "numSteps: ", numSteps
+                          print *, ""
+                        end if
+                      end if
                     end if
                   end if
 !                  !$OMP END CRITICAL

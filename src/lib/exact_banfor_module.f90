@@ -38,11 +38,9 @@ contains
         i       = cmplx(0.0, 1.0)
         W       = Wabs + vel * Wsc
         eps     = 0.5 * abs(Dm) * tan(2. * theta0)
-        
         arg     = 2. * eps / (V - i*W)
         zeta2   = atan(arg)
         zeta    = 0.5 * zeta2
-        
         cze     = cos(zeta)
         sze     = sin(zeta)
         cze2    = cze * cze
