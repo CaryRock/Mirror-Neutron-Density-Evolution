@@ -201,8 +201,13 @@ anglLoop:   do j = 1, nAngles
             PMvels  = 0.0
 
 velsLoop:   do k = 1, nVels!kmin, kmax
-                PN = 1.0
-                PM = 0.0
+                if (N_initial) then
+                  PN = 1.0
+                  PM = 0.0
+                else
+                  PN = 0.0
+                  PM = 1.0
+                end if
 
                 x = 20.0  ! Global Coordinate, cm
 
@@ -244,17 +249,6 @@ mtrlLoop:       do l = 1, nMaterials
                     !P(4) = PM * O(4)
                   end if
                   
-                  !!$OMP CRITICAL
-                  !print *, "theta0  : ", theta0
-                  !print *, "dm      : ", Dm
-                  !print *, "vel     : ", vel
-                  !print *, "tStep   : ", tStep
-                  !print *, "O       : ", O
-                  !print *, "rhoReset: ", rhoReset
-                  !print *, ""
-                  !stop
-                  !!$OMP END CRITICAL
-
 matSteps:         do m = 1, numSteps
                     PN = P(1) + P(3)
                     PM = P(2) + P(4)
@@ -265,25 +259,6 @@ matSteps:         do m = 1, numSteps
                     P(4) = PM * O(4)
                   end do matSteps
 
-!
-                  !!$OMP CRITICAL
-                  !if (PMvels + PM .lt. 0) then
-                  !  print *, ""
-                  !  print *, "Dumping: "
-                  !  print *, "dM (eV), theta (rad), vel (m/s), numSteps: ", Dm, theta0, vel, numSteps
-                  !  print *, "# velocities averaged over: ", nVels
-                  !  print *, "Average velocity: ", vAvg
-                  !  print *, "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
-                  !  print *, "i, j, k: ", i, j, k
-                  !  print *, "vel_list: ", vel_list
-                  !  print *, "O: ", O
-                  !  print *, "P: ", P
-                  !  print *, "PN, PM: ", PN, PM
-                  !  print *, "PNvels, PMvels: ", PNvels, PMvels
-                  !  print *, ""
-                  !  stop
-                  !end if
-!
                   ! angles(101) = 0.001, mass(47) = 199.5...E-9 eV, mass(55) = 501.2...E-9 eV
                   !if (i .eq. nMasses .and. j .eq. 101 .and. k .eq. nVels ) then
                   if (j .eq. 101) then
