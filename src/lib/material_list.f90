@@ -1,15 +1,20 @@
 module material_list
     implicit none
-    type materiallist
-        character(32)   :: matName, matRange  ! Cols 1, 3
-            ! cols          2, 4,          5, 6,   7,   8,    9,     
-        real            ::  d, numDensity, V, Wth, Wsc, Wabs, sigabs
-            ! cols          10,      11,      12,
-        real            ::  sigel, elscatl, abslngth
-            ! cols            13
-        integer         ::  steps
-    end type materiallist
+    !type materiallist
+    !    character(32)   :: matName, matRange  ! Cols 1, 3
+    !        ! cols          2, 4,          5, 6,   7,   8,    9,     
+    !    real            ::  d, numDensity, V, Wth, Wsc, Wabs, sigabs
+    !        ! cols          10,      11,      12,
+    !    real            ::  sigel, elscatl, abslngth
+    !        ! cols            13
+    !    integer         ::  steps
+    !end type materiallist
 
+  type materiallist
+    character(32) :: matName
+    real          :: d, V, Wsc, Wabs, elscatl, absscatl
+    integer       :: steps
+  end type materiallist
 contains
 
 ! === get_lines ================================================================
@@ -39,7 +44,7 @@ contains
         end do
         nlines = nlines - 1 ! Comment at the beginning - don't want that
         
-        !write(*, '(A,I0)') "Total number of materials: ", nlines
+        write(6, '(A,I0)') "Total number of materials: ", nlines
         close(1)
 
         return
@@ -141,14 +146,12 @@ contains
     ! Output:
     !   type(...), dimension(:) :: inventory
     !       Inventory will have been "filled in" appropriately
-    subroutine get_materials(inventory, name, nlines, INFILE_2, &
-                            &skip_Wsc, skip_Wabs)
+    subroutine get_materials(inventory, name, nlines, INFILE_2)
         implicit none
         character(128),      intent(in)     :: INFILE_2
         character(64)                       :: name
         integer,            intent(in)      :: nlines
         type(materiallist), dimension(:)    :: inventory
-        logical, intent(in)                 :: skip_Wsc, skip_Wabs
         integer                             :: n = 0, error = 0
         
 
@@ -158,17 +161,9 @@ contains
 
         do 100 n = 1, nlines
             read(1, *, iostat = error) inventory(n)%matName, &
-                &inventory(n)%d, inventory(n)%matRange, &
-                &inventory(n)%numDensity, inventory(n)%V, &
-                &inventory(n)%Wth, inventory(n)%Wsc, inventory(n)%Wabs,&
-                &inventory(n)%sigabs, inventory(n)%sigel, &
-                &inventory(n)%elscatl, inventory(n)%abslngth, &
-                &inventory(n)%steps
-            ! Not all of the above are useful - some are only there for ease
-            ! of file reading because kludging gets the job done-ing
-            if (skip_Wsc .eqv. .true.) inventory(n)%Wsc = 0.0
-
-            if (skip_Wabs .eqv. .true.) inventory(n)%Wsc = 0.0
+                &inventory(n)%d, inventory(n)%V, &
+                &inventory(n)%Wsc, inventory(n)%Wabs,&
+                &inventory(n)%elscatl, inventory(n)%absscatl, inventory(n)%steps
 100     end do
         
         close(1)

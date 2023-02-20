@@ -191,8 +191,7 @@ contains
         nLines = 0
         nLines = get_lines(INFILE_2)
         allocate(inventory(nLines))
-        call get_materials(inventory, fName, nLines, INFILE_2, &
-                            &skip_Wsc, skip_Wabs)
+        call get_materials(inventory, fName, nLines, INFILE_2)
         
         if (skip_Wsc) then
             do i = 1, nLines
@@ -312,7 +311,7 @@ contains
 
                 case("h")   ! help output
                     write(*, '(6(A/),/,4(A/))')&
-                        "Usage: velmesh [options] ...",&
+                        "Usage: (program) [options] ...",&
                         "Options:",&
                         "   -A  --skip_Wabs     Set absorption potential = 0",&
                         "   -c  --skip_Wsc      Set scattering potential = 0",&
@@ -382,8 +381,7 @@ contains
         nLines = 0
         nLines = get_lines(INFILE_2)
         allocate(inventory(nLines))
-        call get_materials(inventory, fName, nLines, INFILE_2, &
-                            &skip_Wsc, skip_Wabs)
+        call get_materials(inventory, fName, nLines, INFILE_2)
         
         ! Allocate and create the lists for masses and angles desired
         nMasses = get_num_masses(INFILE_4)
@@ -406,5 +404,101 @@ contains
 
     end subroutine get_vel_params
 ! === get_vel_params ===========================================================
+  subroutine get_vel_prob_params(MATERIAL_FILE, inventory, psi, fName, &
+    &nMaterials, Masses, Angles, nMasses, nAngles, nVels, temp, initial_n)
+    use f90getopt
+    use material_list
+    implicit none
+    ! Only needs an input parameter file and the corresponding material file
+    ! Thus, really only needs two input options.
+    ! Single mass and angle for each run -> on that input parameter file
 
+    type(materiallist), dimension(:), allocatable :: inventory
+    real, dimension(:), allocatable :: Masses, Angles
+    complex, dimension(2)     :: psi
+    real                      :: Mass, Angle, temp!, vel_min, vel_max, vel_step
+                                                  ! For different program
+
+    integer                   :: nLines, index, nMasses, nAngles
+    integer                   :: numSteps, nVels, nMaterials
+
+    character(128)            :: PARAMETER_FILE, MATERIAL_FILE
+    character(64), intent(in) :: fName
+    !character(32)             :: matName
+    
+    logical                   :: initial_n
+    logical                   :: L_opt, P_opt, M_opt
+
+    type(option_s)  :: opts(4)
+    opts(1) = option_s("help",        .false.,  "h")
+    opts(2) = option_s("material",    .true.,   "L")
+    opts(3) = option_s("parameters",  .true.,   "P")
+    opts(4) = option_s("initial_n",   .true.,   "M")
+
+    if(command_argument_count() .eq. 0) then
+      print *, "This program requires a material and a parameter file as input."
+      print *, "Showing the 'help' output."
+      stop
+    end if
+
+    L_opt = .false.
+    P_opt = .false.
+    M_opt = .false.
+
+    initial_n = .true.
+
+    do 
+      select case(getopt("L:M:P:h", opts))
+      case(char(0))
+        exit
+      
+      case("L") ! option -L --material
+        L_opt = .true.
+        MATERIAL_FILE = trim(optarg)
+
+      case("P") ! option -P --parameters
+        P_opt = .true.
+        PARAMETER_FILE = trim(optarg)
+
+      case("M") ! option -M --initial_n
+        M_opt = .true.
+        initial_n = .false.
+
+      case("h") ! help output
+        write(*, '(6(a/),/,4(A/))')&
+          "Usage: ..."
+          stop
+      end select
+    end do
+
+    ! Check for L and P being set, otherwise, look in current directory
+    ! If they can't be located, exit.
+    if (.not. L_opt) then
+      write(6, *) "A material file is required. Please use '-L' to specify one."
+      stop
+    end if
+    
+    if (.not. P_opt) then
+      PARAMETER_FILE = "parameter.list"
+    end if
+
+    ! Start reading files and getting parameters
+    nLines = 0
+    nLines = get_lines(MATERIAL_FILE)
+    allocate(inventory(nLines))
+    call get_materials(inventory, fName, nLines, MATERIAL_FILE)
+    
+    ! Allocate and create the lists for the masses and angles desired
+    nMasses = 1
+    nAngles = 1
+    allocate(Masses(nMasses))
+    allocate(Angles(nAngles))
+    open(unit = 1, file = PARAMETER_FILE, status = "old")
+    read(1, *) Masses(1)
+    read(1, *) Angles(1)
+    read(1, *) nVels
+    read(1, *) temp
+    close(unit = 1)
+
+  end subroutine get_vel_prob_params
 end module get_parameters

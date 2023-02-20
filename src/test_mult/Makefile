@@ -22,15 +22,15 @@ parallel: $(ug_obj_par)
 
 $(ug_obj): $(patsubst %.o, %.f90, $@)
 	$(CF) $(DFLAGS) -I$(libpath) -c $(patsubst %.o, %.f90, $@)
-	$(CF) $(DFLAGS) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-mult_step
+	$(CF) $(DFLAGS) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-test_mult_step
 
 $(ug_obj_par): $(patsubst &.o, %.f90, $@)
 	$(CF) $(DPARALLEL) -I$(libpath) -c $(patsubst %.o, %.f90, $@)
-	$(CF) $(DPARALLEL) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-mult_step
+	$(CF) $(DPARALLEL) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-test_mult_step
 
 clean:
 	rm *.o
-	rm ~/nnp-mult_step
+	rm ~/nnp-test_mult_step
 # === Manual commands ==========================================================
 
 step: $(step)

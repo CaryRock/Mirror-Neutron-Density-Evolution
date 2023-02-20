@@ -3,6 +3,7 @@ module constants
     real, parameter :: pi = 4.0 * atan(1.0)
     real, parameter :: c  = 2.99792E8   ! m/s
     real, parameter :: mn = 939.5654133E6 / c**2    ! Neutron mass, MeV / c^2
+    real, parameter :: Ch = 1.6e-19     ! Coulombs in fund. charge
 end module constants
 
 module distributions
@@ -28,7 +29,7 @@ contains
         real                :: x, dv
 
         real, dimension(:)  :: velocities, PDF, CDF
-        integer                         :: i
+        integer             :: i
 
         x = mn / (kB * temp)
         PDF = 0.0
@@ -115,4 +116,49 @@ contains
 
       return
     end subroutine YK_MAXW
+
+    recursive subroutine neutron_MW_dist(temp, vel, min, max)
+      use constants
+      implicit none
+      ! neutron mass: 
+      ! Boltzmann's constant: kB
+      ! a = m / kB*T => Ta = m/kB
+      real  :: temp, vel, prob, rand, reject, min, max
+        ! min is the minimum velocity to allow
+        ! max is the maximum...
+        ! prob is for comparing PDF values
+      real  :: sigma, v_mp, A
+      logical :: repeat
+
+      repeat = .true.
+      sigma = sqrt(kB*temp / mn)
+      v_mp = sqrt(3.)*sigma
+      A = sqrt(2./pi) / sigma**3  ! MW dist coeff.
+      ! B = 1/(sqrt(2*pi)*sigma)   ! Gauss. dist. coeff.
+
+      prob = 0.
+      reject = 1.
+      ! Roll for desired velocity
+      do while (reject .gt. prob)
+        call random_number(rand)
+        vel = max * rand
+
+!        do while (vel .le. min)
+!          call random_number(rand)
+!          vel = max * rand
+!        end do
+
+        prob = A * vel*vel*vel * exp(-0.5 * (vel / sigma)**2)
+
+        ! Roll for rejection-sampling velocity
+        ! Compare with a gaussian, or with a simple box (eta * v_mp)
+        call random_number(rand)
+        !reject = rand * A * vel * exp( -0.5*((vel - v_mp)/sigma )**2 )
+        reject = v_mp * rand
+      
+        ! Compare and advance
+!        if (reject .le. prob) repeat = .false.
+      end do
+
+  end subroutine neutron_MW_dist
 end module distributions

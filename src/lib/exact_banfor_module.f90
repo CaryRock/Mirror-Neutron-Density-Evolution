@@ -1,12 +1,11 @@
 module exact_banfor_module
 contains
-    recursive subroutine exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, tStep, psi, rho)
+    recursive subroutine exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, tStep, rho)
         implicit none
         ! Input argument declarations
         real    Dm, vel, theta0, Vopt, Wsc, Wabs, tStep
         complex, dimension(2, 2)  :: s
         real, dimension(2, 2)     :: rho
-        complex, dimension(2)     :: psi!, psi2
         
         ! Required variable declarations - not from invocation
         real        hbar, TOF, time, eps   

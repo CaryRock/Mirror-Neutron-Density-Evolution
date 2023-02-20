@@ -1,6 +1,6 @@
-mult_step_src = mult_step.f90
-mult_step_obj = $(patsubst %.f90, build/$(D)/%.o, $(mult_step_src))
-mult_step_dep = $(patsubst %.f90, build/$(D)/%.d, $(mult_step_src))
+check_vel_prob_src = check_vel_prob.f90
+check_vel_prob_obj = $(patsubst %.f90, build/$(D)/%.o, $(check_vel_prob_src))
+check_vel_prob_dep = $(patsubst %.f90, build/$(D)/%.d, $(check_vel_prob_src))
 step := build/$(D)/nnp-step
 
 # === Manual commands ==========================================================
@@ -13,8 +13,8 @@ libpath= ../lib
 libobj = $(libpath)/$(wildcard $(libpath)/*.o)
 libmod = $(libpath)/$(wildcard $(libpath)/*.mod)
 
-#ug_obj := $(patsubst %.f90, %.o, $(mult_step_src))
-ug_obj_par := $(patsubst %.f90, %.o, $(mult_step_src))
+#ug_obj := $(patsubst %.f90, %.o, $(check_vel_prob_src))
+ug_obj_par := $(patsubst %.f90, %.o, $(check_vel_prob_src))
 
 #serial: $(ug_obj)
 
@@ -22,20 +22,20 @@ parallel: $(ug_obj_par)
 
 $(ug_obj): $(patsubst %.o, %.f90, $@)
 	$(CF) $(DFLAGS) -I$(libpath) -c $(patsubst %.o, %.f90, $@)
-	$(CF) $(DFLAGS) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-mult_step
+	$(CF) $(DFLAGS) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-check_vel_prob
 
 $(ug_obj_par): $(patsubst &.o, %.f90, $@)
 	$(CF) $(DPARALLEL) -I$(libpath) -c $(patsubst %.o, %.f90, $@)
-	$(CF) $(DPARALLEL) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-mult_step
+	$(CF) $(DPARALLEL) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-check_vel_prob
 
 clean:
 	rm *.o
-	rm ~/nnp-mult_step
+	rm ~/nnp-check_vel_prob
 # === Manual commands ==========================================================
 
 step: $(step)
-$(step): $(mult_step_obj) $(lib)
+$(step): $(check_vel_prob_obj) $(lib)
 	echo "LD $@..."
 	$(CF) -o $@ $^ $(LFLAGS) $(lib)
 
--include $(mult_step_dep)
+-include $(check_vel_prob_dep)

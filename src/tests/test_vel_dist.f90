@@ -26,6 +26,7 @@ program vel_dist_test
     file_names(3) = "velocities.txt"
     file_names(4) = "sampled.txt"
 
+    print *, num_samples
     call setup_MBDist(num_samples, temp, velocities, PDF, CDF, vmin, vmax)
 
     do i = 1, num_samples

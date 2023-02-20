@@ -72,7 +72,7 @@ program mult_step
     character(32), dimension(6) :: header
     !character(32)   :: core
     character(64)   :: filename
-    character(128)  :: INFILE_1, INFILE_2, INFILE_3, INFILE_4, INFILE_5
+    character(128)  :: PARAMETER_FILE, MATERIAL_FILE, INFILE_3, MASS_FILE, ANGLE_FILE
     character(256)  :: directoryName, errorlog, file1, file2!, file3, file4
 
 ! === End Variable Initialization ==============================================
@@ -97,11 +97,11 @@ program mult_step
     dat_type  = "ave"
     prog_type = "mult_step"
 
-    !INFILE_1 = "parameter.list"
-    INFILE_2 = "material.list"
+    !PARAMETER_FILE = "parameter.list"
+    MATERIAL_FILE = "material.list"
     INFILE_3 = "velocity.list"
-    !INFILE_4 = "deltaMs"
-    !INFILE_5 = "thetas"
+    !MASS_FILE = "deltaMs"
+    !ANGLE_FILE = "thetas"
 
     errorlog = "error-" // uuid // ".log"
 
@@ -112,7 +112,7 @@ program mult_step
 
 ! === Begin Preparation/Instantiations =========================================
 
-    call get_vel_params(INFILE_2, INFILE_4, INFILE_5, inventory, psi, &
+    call get_vel_params(MATERIAL_FILE, MASS_FILE, ANGLE_FILE, inventory, psi, &
         &filename, nMaterials, only_endpoint, no_scattering, &
         &no_absorption, Masses, Angles, nMasses, nAngles, nVels)
 

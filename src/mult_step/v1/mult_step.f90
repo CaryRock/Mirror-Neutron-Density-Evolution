@@ -51,7 +51,6 @@ program mult_step
     real    :: PN, PM
     real    :: dlina, Dm, theta0, vel, Vopt, Wabs, Wsc, A, B, tStep, xStep
     real    :: x, lambda, Navg, Nvar, Mavg, Mvar, PNvels, PMvels, vAvg, temp
-    real    :: dx, matD, remThick, elLambda
 
     integer :: i, j, k, l, m, numSteps, nMaterials, nMasses, nAngles, nVels
     integer :: kmin, kmax, totSteps, accumulatedSteps
@@ -178,8 +177,7 @@ program mult_step
     print *, adjustl(header(1)), ",", 20.0, ",", 20.0,",", 1.0,",", 0.0
     !$OMP PARALLEL DO Private(i, j, k, l, m, kmin, kmax, vel, Dm, theta0, &
     !$OMP& tStep, rho, psi, O, P, PN, PM, PNvels, PMvels, Navg, Mavg, &
-    !$OMP& dlina, Vopt, Wabs, numSteps, x, vAvg, vel_list, dx, matD, &
-    !$OMP& remThick, elLambda)
+    !$OMP& dlina, Vopt, Wabs, numSteps, x, vAvg, vel_list)
 massLoop:   do i = 1, nMasses
         Dm = Masses(i)
 
@@ -189,19 +187,25 @@ anglLoop:   do j = 1, nAngles
             theta0  = Angles(j)
             
             ! Generate the velocities to use
-            do k = 1, nVels
-              call YK_MAXW(temp, vel_list(k))
-              !vel_list(k) = 2300.
-            end do
-            !vel_list(1) = 2300.
-
+            if (nVels .eq. 1) then
+              vel_list(1) = 2300.
+            else
+              do k = 1, nVels
+                call YK_MAXW(temp, vel_list(k))
+              end do
+            end if
+            
             vAvg = vAvg + sum(vel_list)
             vAvg = vAvg / nVels
             
+            !O       = 0.0
+            !P       = 0.0
+            !PN      = 1.0
+            !PM      = 0.0
             PNvels  = 0.0
             PMvels  = 0.0
 
-velsLoop:   do k = 1, nVels
+velsLoop:   do k = 1, nVels!kmin, kmax
                 if (N_initial) then
                   PN = 1.0
                   PM = 0.0
@@ -216,42 +220,41 @@ velsLoop:   do k = 1, nVels
                 rho = rhoReset
 
 mtrlLoop:       do l = 1, nMaterials
-                  matD = inventory(l)%d               ! m
                   numSteps = inventory(l)%steps
-!                  tStep = inventory(l)%elscatl / vel  ! s
-                  Vopt = inventory(l)%V               ! eV
-                  Wabs = inventory(l)%Wabs            ! eV
-                  elLambda = inventory(l)%elscatl     ! m
+                  !dlina = inventory(l)%elscatl * numSteps / 100. ! m
+                  tStep = inventory(l)%elscatl        / vel    ! s
+                  Vopt = inventory(l)%V             ! eV
+                  Wabs = inventory(l)%Wabs          ! eV
+                    
 ! Set-up probabilities for initially starting as a neutron
+                  rho = rhoReset
+                  call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, &
+                    &tStep, psi, rho)
+                  O(1) = rho(1, 1)
+                  O(2) = rho(1, 2)
+                  O(3) = rho(2, 1)
+                  O(4) = rho(2, 2)
 
-                  remThick = matD
-                  
-                  m = 1
-matSteps:         do while (remThick .gt. 0)
-                    rho = rhoReset
-                    call scttStep(elLambda, remThick, dx)
-                    tStep = dx / vel
-                    call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, &
-                      &tStep, psi, rho)
-                    O(1) = rho(1, 1)
-                    O(2) = rho(1, 2)
-                    O(3) = rho(2, 1)
-                    O(4) = rho(2, 2)
-
-                    if (l .eq. 1) then
-                      if (N_initial) then
-                        P(1) = PN * O(1)
-                        P(2) = PN * O(2)
-                        P(3) = 0.0
-                        P(4) = 0.0
-                      else
-                        P(1) = 0.0
-                        P(2) = 0.0
-                        P(3) = PM * O(3)
-                        P(4) = PM * O(4)
-                      end if
+                  if (l .eq. 1) then
+                    if (N_initial) then
+                      P(1) = PN * O(1)
+                      P(2) = PN * O(2)
+                      P(3) = 0.0!PM * O(3)
+                      P(4) = 0.0!PM * O(4)
+                    else
+                      P(1) = 0.0
+                      P(2) = 0.0
+                      P(3) = PM * O(3)
+                      P(4) = PM * O(4)
                     end if
-
+                  !else
+                    !P(1) = PN * O(1)
+                    !P(2) = PN * O(2)
+                    !P(3) = PM * O(3)
+                    !P(4) = PM * O(4)
+                  end if
+                  
+matSteps:         do m = 1, numSteps
                     PN = P(1) + P(3)
                     PM = P(2) + P(4)
 
@@ -259,10 +262,71 @@ matSteps:         do while (remThick .gt. 0)
                     P(2) = PN * O(2)
                     P(3) = PM * O(3)
                     P(4) = PM * O(4)
-
-                    m = m + 1
-
                   end do matSteps
+
+!
+                  ! angles(101) = 0.001, mass(47) = 199.5...E-9 eV, mass(55) = 501.2...E-9 eV
+                  !if (i .eq. nMasses .and. j .eq. 101 .and. k .eq. nVels ) then
+                  if (j .eq. 101) then
+                    if (k .eq. nVels) then
+                      if (i .eq. 47) then
+                        x = x + inventory(l)%d
+                        print *, inventory(l)%matName, ",",inventory(l)%d, ",",&
+                          &x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
+                        write(11, *) inventory(l)%matName, ",",inventory(l)%d, &
+                          &",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
+                        if (l .eq. nMaterials) then
+                          print *, ""
+                          write(11, *) ""
+                          print *, "dM (eV), theta (rad), vel (m/s), numSteps: ",&
+                            &Dm, theta0, vel, numSteps
+                          write(11, *) "dM (eV), theta (rad), vel (m/s), numSteps: ", &
+                            &Dm, theta0, vel, numSteps
+                          print *, "# velocities averaged over: ", nVels
+                          write(11, *) "# velocities averaged over: ", nVels
+                          print *, "Average velocity: ", vAvg
+                          write(11, *) "Average velocity: ", vAvg
+                          print *, "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
+                          write(11, *) "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
+                          print *, "O: ", O
+                          write(11, *) "O: ", O
+                          print *, "numSteps: ", numSteps
+                          write(11, *) "numSteps: ", numSteps
+                          print *, ""
+                        end if
+                      end if
+
+                      if (i .eq. 55) then
+                        x = x + inventory(l)%d
+                        print *, inventory(l)%matName, ",",inventory(l)%d, ",", &
+                          &x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
+                        write(12, *) inventory(l)%matName, ",",inventory(l)%d, &
+                          &",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
+                        if (l .eq. nMaterials) then
+                          print *, ""
+                          write(12, *) ""
+                          print *, "dM (eV), theta (rad), vel (m/s), numSteps: ", &
+                            &Dm, theta0, vel, numSteps
+                          write(12, *) "dM (eV), theta (rad), vel (m/s), numSteps: ", &
+                            &Dm, theta0, vel, numSteps
+                          print *, "# velocities averaged over: ", nVels
+                          write(12, *) "# velocities averaged over: ", nVels
+                          print *, "Average velocity: ", vAvg
+                          write(12, *) "Average velocity: ", vAvg
+                          print *, "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
+                          write(12, *) "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
+                          print *, "O: ", O
+                          write(12, *) "O: ", O
+                          print *, "numSteps: ", numSteps
+                          write(12, *) "numSteps: ", numSteps
+                          print *, ""
+                        end if
+                      end if
+                    end if
+                  end if
+!
+!                  !$OMP END CRITICAL
+                
                 end do mtrlLoop
 
                 PNvels = PNvels + PN
@@ -281,7 +345,6 @@ matSteps:         do while (remThick .gt. 0)
     do k = 1, nVels
       call YK_MAXW(temp, vel_list(k))
     end do
-    vel_list(1) = 2300.
 
     open(unit = 1, file = trim(adjustl(directoryName)) &
         &// "masses.txt", status = "unknown")
@@ -291,7 +354,7 @@ matSteps:         do while (remThick .gt. 0)
         &// "velocities.txt", status = "unknown")
     write(unit = 1, fmt = 51) "#", "Mass Delta"
     write(unit = 2, fmt = 51) "#", "Angle"
-    write(unit = 3, fmt = 53) "#", "Velocities (m/s)"
+    write(unit = 3, fmt = 53) "#", "Velocities (cm/s)"
 
     do i = 1, nMasses
         write(unit = 1, fmt = 50) Masses(i)
@@ -321,18 +384,8 @@ matSteps:         do while (remThick .gt. 0)
 53  format(A1, A17)
     
 ! === End File Writing and Output ==============================================
-contains
-! === Begin Subroutine Declarations ============================================
-    recursive subroutine scttStep(lambda, remThick, variate)
-      implicit none
-      real, intent(in)  :: lambda
-      real              :: remThick, variate
 
-      call random_number(variate)
-      variate = -lambda * log(variate)
-      if (variate .ge. remThick) variate = remThick
-      remThick = remThick - variate
-    end subroutine scttStep
-! === End Subroutine Delcarations ==============================================
+! === End Preparation/Instantiations ===========================================
+
 ! ==============================================================================
 end program mult_step

@@ -51,7 +51,6 @@ program mult_step
     real    :: PN, PM
     real    :: dlina, Dm, theta0, vel, Vopt, Wabs, Wsc, A, B, tStep, xStep
     real    :: x, lambda, Navg, Nvar, Mavg, Mvar, PNvels, PMvels, vAvg, temp
-    real    :: dx, matD, remThick, elLambda
 
     integer :: i, j, k, l, m, numSteps, nMaterials, nMasses, nAngles, nVels
     integer :: kmin, kmax, totSteps, accumulatedSteps
@@ -95,7 +94,7 @@ program mult_step
     f58 = "(F" // trim(adjustl(ff58)) // ".11)"
 
     dat_type  = "ave"
-    prog_type = "mult_step"
+    prog_type = "test_mult_step"
 
     !INFILE_1 = "parameter.list"
     INFILE_2 = "material.list"
@@ -137,7 +136,10 @@ program mult_step
     ! Note: this counts how many values of the velocity to average over, not how
     ! many velocities there are in total - that is, for averaging, N = nVels
     !nVels = 100  ! TODO: Make this an option later
+    nVels = 1
     allocate(vel_list(nVels))
+
+    vel_list(1) = 2300.
 
     PNvels = 0.0
     PMvels = 0.0
@@ -173,13 +175,9 @@ program mult_step
     temp = 342.0
 
 !          # Mtrl MtrlThck G.Dist PN PM
-    print '(A2, A35, A28, A30, A30, A27)', "# ", header(2), header(3), &
-      &header(4), header(5), header(6)
-    print *, adjustl(header(1)), ",", 20.0, ",", 20.0,",", 1.0,",", 0.0
     !$OMP PARALLEL DO Private(i, j, k, l, m, kmin, kmax, vel, Dm, theta0, &
     !$OMP& tStep, rho, psi, O, P, PN, PM, PNvels, PMvels, Navg, Mavg, &
-    !$OMP& dlina, Vopt, Wabs, numSteps, x, vAvg, vel_list, dx, matD, &
-    !$OMP& remThick, elLambda)
+    !$OMP& dlina, Vopt, Wabs, numSteps, x, vAvg) FirstPrivate(vel_list)
 massLoop:   do i = 1, nMasses
         Dm = Masses(i)
 
@@ -191,17 +189,21 @@ anglLoop:   do j = 1, nAngles
             ! Generate the velocities to use
             do k = 1, nVels
               call YK_MAXW(temp, vel_list(k))
-              !vel_list(k) = 2300.
             end do
+            ! Fix for testing
             !vel_list(1) = 2300.
 
             vAvg = vAvg + sum(vel_list)
             vAvg = vAvg / nVels
             
+            !O       = 0.0
+            !P       = 0.0
+            !PN      = 1.0
+            !PM      = 0.0
             PNvels  = 0.0
             PMvels  = 0.0
 
-velsLoop:   do k = 1, nVels
+velsLoop:   do k = 1, nVels!kmin, kmax
                 if (N_initial) then
                   PN = 1.0
                   PM = 0.0
@@ -216,42 +218,38 @@ velsLoop:   do k = 1, nVels
                 rho = rhoReset
 
 mtrlLoop:       do l = 1, nMaterials
-                  matD = inventory(l)%d               ! m
                   numSteps = inventory(l)%steps
-!                  tStep = inventory(l)%elscatl / vel  ! s
-                  Vopt = inventory(l)%V               ! eV
-                  Wabs = inventory(l)%Wabs            ! eV
-                  elLambda = inventory(l)%elscatl     ! m
+                  !dlina = inventory(l)%elscatl * numSteps / 100. ! m
+                  tStep = inventory(l)%elscatl / 100. / vel    ! s
+                  Vopt = inventory(l)%V     * 1.E-9 ! eV
+                  Wabs = inventory(l)%Wabs  * 1.E-9 ! eV
+                    
 ! Set-up probabilities for initially starting as a neutron
+                  rho = rhoReset
+                  call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, &
+                    &tStep, psi, rho)
+                  O(1) = rho(1, 1)
+                  O(2) = rho(1, 2)
+                  O(3) = rho(2, 1)
+                  O(4) = rho(2, 2)
 
-                  remThick = matD
+                  print *, theta0, O
                   
-                  m = 1
-matSteps:         do while (remThick .gt. 0)
-                    rho = rhoReset
-                    call scttStep(elLambda, remThick, dx)
-                    tStep = dx / vel
-                    call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, &
-                      &tStep, psi, rho)
-                    O(1) = rho(1, 1)
-                    O(2) = rho(1, 2)
-                    O(3) = rho(2, 1)
-                    O(4) = rho(2, 2)
-
-                    if (l .eq. 1) then
-                      if (N_initial) then
-                        P(1) = PN * O(1)
-                        P(2) = PN * O(2)
-                        P(3) = 0.0
-                        P(4) = 0.0
-                      else
-                        P(1) = 0.0
-                        P(2) = 0.0
-                        P(3) = PM * O(3)
-                        P(4) = PM * O(4)
-                      end if
+                  if (l .eq. 1) then
+                    if (N_initial) then
+                      P(1) = PN * O(1)
+                      P(2) = PN * O(2)
+                      P(3) = 0.0
+                      P(4) = 0.0
+                    else
+                      P(1) = 0.0
+                      P(2) = 0.0
+                      P(3) = PM * O(3)
+                      P(4) = PM * O(4)
                     end if
-
+                  end if
+                  
+matSteps:         do m = 1, numSteps
                     PN = P(1) + P(3)
                     PM = P(2) + P(4)
 
@@ -259,9 +257,6 @@ matSteps:         do while (remThick .gt. 0)
                     P(2) = PN * O(2)
                     P(3) = PM * O(3)
                     P(4) = PM * O(4)
-
-                    m = m + 1
-
                   end do matSteps
                 end do mtrlLoop
 
@@ -278,10 +273,9 @@ matSteps:         do while (remThick .gt. 0)
 ! === Begin File Writing and Output ============================================
 
     ! Generate a random velocity list
-    do k = 1, nVels
-      call YK_MAXW(temp, vel_list(k))
-    end do
-    vel_list(1) = 2300.
+    !do k = 1, nVels
+    !  call YK_MAXW(temp, vel_list(k))
+    !end do
 
     open(unit = 1, file = trim(adjustl(directoryName)) &
         &// "masses.txt", status = "unknown")
@@ -289,9 +283,11 @@ matSteps:         do while (remThick .gt. 0)
         &// "angles.txt", status = "unknown")
     open(unit = 3, file = trim(adjustl(directoryName)) &
         &// "velocities.txt", status = "unknown")
+    open(unit = 4, file = trim(adjustl(directoryName)) &
+        &// "log.txt", status = "unknown")
     write(unit = 1, fmt = 51) "#", "Mass Delta"
     write(unit = 2, fmt = 51) "#", "Angle"
-    write(unit = 3, fmt = 53) "#", "Velocities (m/s)"
+    write(unit = 3, fmt = 53) "#", "Velocities (cm/s)"
 
     do i = 1, nMasses
         write(unit = 1, fmt = 50) Masses(i)
@@ -308,6 +304,8 @@ matSteps:         do while (remThick .gt. 0)
     end do
     close(unit = 3)
 
+    ! Write parameters/etc. used
+    close(unit = 4)
     do i = 1, nMasses
         write(unit = 10, fmt = 52) meshNavg(i, :)
         write(unit = 20, fmt = 52) meshMavg(i, :)
@@ -321,18 +319,8 @@ matSteps:         do while (remThick .gt. 0)
 53  format(A1, A17)
     
 ! === End File Writing and Output ==============================================
-contains
-! === Begin Subroutine Declarations ============================================
-    recursive subroutine scttStep(lambda, remThick, variate)
-      implicit none
-      real, intent(in)  :: lambda
-      real              :: remThick, variate
 
-      call random_number(variate)
-      variate = -lambda * log(variate)
-      if (variate .ge. remThick) variate = remThick
-      remThick = remThick - variate
-    end subroutine scttStep
-! === End Subroutine Delcarations ==============================================
+! === End Preparation/Instantiations ===========================================
+
 ! ==============================================================================
 end program mult_step
