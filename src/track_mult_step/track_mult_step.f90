@@ -232,7 +232,7 @@ mtrlLoop:       do l = 1, nMaterials
 ! Set-up probabilities for initially starting as a neutron
                   rho = rhoReset
                   call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, &
-                    &tStep, psi, rho)
+                    &tStep, rho)
                   O(1) = rho(1, 1)
                   O(2) = rho(1, 2)
                   O(3) = rho(2, 1)
