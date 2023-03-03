@@ -18,21 +18,30 @@ libmod = $(libpath)/$(wildcard $(libpath)/*.mod)
 #ug_obj := $(patsubst %.f90, %.o, $(track_mult_step_src))
 ug_obj_par := $(patsubst %.f90, %.o, $(track_mult_step_src))
 
+execDir := "$HOME/NNprime/"
+name := nnp-track_mult_step
+
 #serial: $(ug_obj)
 
 parallel: $(ug_obj_par)
 
 $(ug_obj): $(patsubst %.o, %.f90, $@)
 	$(CF) $(DFLAGS) -I$(libpath) -c $(patsubst %.o, %.f90, $@)
-	$(CF) $(DFLAGS) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-track_mult_step
+	$(CF) $(DFLAGS) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o "$(execDir)/$(name)"
+#~/nnp-track_mult_step
 
 $(ug_obj_par): $(patsubst &.o, %.f90, $@)
 	$(CF) $(DPARALLEL) -I$(libpath) -c $(patsubst %.o, %.f90, $@)
-	$(CF) $(DPARALLEL) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o ~/nnp-track_mult_step
+	$(CF) $(DPARALLEL) -I$(libpath) $(libobj) $(patsubst %.o, %.f90, $@) -o "$(execDir)/$(name)"
+#~/nnp-track_mult_step
+
+tidy:
+	rm -f *.mod;
+	rm -f *.o
 
 clean:
-	rm ~/nnp-track_mult_step
-	rm *.o
+	make tidy
+	rm -f ~/NNprime/nnp-track_mult_step
 # === Manual commands ==========================================================
 
 step: $(step)

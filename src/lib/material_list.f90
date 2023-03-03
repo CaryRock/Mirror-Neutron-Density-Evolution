@@ -43,8 +43,6 @@ contains
             read(1, *, iostat = error) line
         end do
         nlines = nlines - 1 ! Comment at the beginning - don't want that
-        
-        write(6, '(A,I0)') "Total number of materials: ", nlines
         close(1)
 
         return

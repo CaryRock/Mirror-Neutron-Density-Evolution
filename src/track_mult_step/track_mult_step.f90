@@ -6,6 +6,7 @@ program track_mult_step
     use get_parameters
     use NNp_file_writing
     use distributions
+    use NNp_Loop
     !$ use OMP_LIB
     implicit none
 
@@ -52,6 +53,8 @@ program track_mult_step
     real    :: PN, PM
     real    :: dlina, Dm, theta0, vel, Vopt, Wabs, Wsc, A, B, tStep, xStep
     real    :: x, lambda, Navg, Nvar, Mavg, Mvar, PNvels, PMvels, vAvg, temp
+    ! JANK
+    real    :: remThick, matD, elLambda, dx
 
     integer :: i, j, k, l, m, numSteps, nMaterials, nMasses, nAngles, nVels
     integer :: kmin, kmax, totSteps, accumulatedSteps
@@ -175,16 +178,19 @@ program track_mult_step
     header(5) = "PN"
     header(6) = "PM"
 
-    Wsc = 0.0
-    temp = 342.0
+    !Wsc = 0.0
+    temp = 342.0  ! This can be read in from the material list cards
 
 !          # Mtrl MtrlThck G.Dist PN PM
+
     print '(A2, A35, A28, A30, A30, A27)', "# ", header(2), header(3), &
       &header(4), header(5), header(6)
     print *, adjustl(header(1)), ",", 20.0, ",", 20.0,",", 1.0,",", 0.0
+
     !$OMP PARALLEL DO Private(i, j, k, l, m, kmin, kmax, vel, Dm, theta0, &
     !$OMP& tStep, rho, psi, O, P, PN, PM, PNvels, PMvels, Navg, Mavg, &
-    !$OMP& dlina, Vopt, Wabs, numSteps, x, vAvg, vel_list)
+    !$OMP& dlina, Vopt, Wabs, Wsc, numSteps, x, vAvg, vel_list, &
+    !$OMP& matAveN, matAveM)
 massLoop:   do i = 1, nMasses
         Dm = Masses(i)
 
@@ -195,7 +201,7 @@ anglLoop:   do j = 1, nAngles
             
             ! Generate the velocities to use
             do k = 1, nVels
-              call YK_MAXW(temp, vel_list(k))
+              call neutron_MW_dist(temp, vel_list(k), 0., 7153.416954)
             end do
             
             vAvg = vAvg + sum(vel_list)
@@ -208,137 +214,19 @@ anglLoop:   do j = 1, nAngles
             PNvels  = 0.0
             PMvels  = 0.0
 
-velsLoop:   do k = 1, nVels!kmin, kmax
-                if (N_initial) then
-                  PN = 1.0
-                  PM = 0.0
-                else
-                  PN = 0.0
-                  PM = 1.0
-                end if
+            ! Generate all the velocities to be used
+            !do k = 1, nVels
+            !  call neutron_MW_dist(temp, vel_list(k), 0., 7153.416954)
+            !end do
 
-                x = 20.0  ! Global Coordinate, cm
-
-                vel = vel_list(k) ! m/s
-                rho = rhoReset
-
-mtrlLoop:       do l = 1, nMaterials
-                  numSteps = inventory(l)%steps
-                  !dlina = inventory(l)%elscatl * numSteps / 100. ! m
-                  tStep = inventory(l)%elscatl / 100. / vel    ! s
-                  Vopt = inventory(l)%V     * 1.E-9 ! eV
-                  Wabs = inventory(l)%Wabs  * 1.E-9 ! eV
-                    
-! Set-up probabilities for initially starting as a neutron
-                  rho = rhoReset
-                  call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, &
-                    &tStep, rho)
-                  O(1) = rho(1, 1)
-                  O(2) = rho(1, 2)
-                  O(3) = rho(2, 1)
-                  O(4) = rho(2, 2)
-
-                  if (l .eq. 1) then
-                    if (N_initial) then
-                      P(1) = PN * O(1)
-                      P(2) = PN * O(2)
-                      P(3) = 0.0!PM * O(3)
-                      P(4) = 0.0!PM * O(4)
-                    else
-                      P(1) = 0.0
-                      P(2) = 0.0
-                      P(3) = PM * O(3)
-                      P(4) = PM * O(4)
-                    end if
-                  !else
-                    !P(1) = PN * O(1)
-                    !P(2) = PN * O(2)
-                    !P(3) = PM * O(3)
-                    !P(4) = PM * O(4)
-                  end if
-                  
-matSteps:         do m = 1, numSteps
-                    PN = P(1) + P(3)
-                    PM = P(2) + P(4)
-
-                    P(1) = PN * O(1)
-                    P(2) = PN * O(2)
-                    P(3) = PM * O(3)
-                    P(4) = PM * O(4)
-                  end do matSteps
-
-!
-                  ! angles(101) = 0.001, mass(47) = 199.5...E-9 eV, mass(55) = 501.2...E-9 eV
-                  !if (i .eq. nMasses .and. j .eq. 101 .and. k .eq. nVels ) then
-                  if (j .eq. 101) then
-                    if (k .eq. nVels) then
-                      if (i .eq. 47) then
-                        x = x + inventory(l)%d
-                        print *, inventory(l)%matName, ",",inventory(l)%d, ",",&
-                          &x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
-                        write(11, *) inventory(l)%matName, ",",inventory(l)%d, &
-                          &",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
-                        if (l .eq. nMaterials) then
-                          print *, ""
-                          write(11, *) ""
-                          print *, "dM (eV), theta (rad), vel (m/s), numSteps: ",&
-                            &Dm, theta0, vel, numSteps
-                          write(11, *) "dM (eV), theta (rad), vel (m/s), numSteps: ", &
-                            &Dm, theta0, vel, numSteps
-                          print *, "# velocities averaged over: ", nVels
-                          write(11, *) "# velocities averaged over: ", nVels
-                          print *, "Average velocity: ", vAvg
-                          write(11, *) "Average velocity: ", vAvg
-                          print *, "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
-                          write(11, *) "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
-                          print *, "O: ", O
-                          write(11, *) "O: ", O
-                          print *, "numSteps: ", numSteps
-                          write(11, *) "numSteps: ", numSteps
-                          print *, ""
-                        end if
-                      end if
-
-                      if (i .eq. 55) then
-                        x = x + inventory(l)%d
-                        print *, inventory(l)%matName, ",",inventory(l)%d, ",", &
-                          &x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
-                        write(12, *) inventory(l)%matName, ",",inventory(l)%d, &
-                          &",", x,",", (PNvels + PN)/nVels,",", (PMvels + PM)/nVels
-                        if (l .eq. nMaterials) then
-                          print *, ""
-                          write(12, *) ""
-                          print *, "dM (eV), theta (rad), vel (m/s), numSteps: ", &
-                            &Dm, theta0, vel, numSteps
-                          write(12, *) "dM (eV), theta (rad), vel (m/s), numSteps: ", &
-                            &Dm, theta0, vel, numSteps
-                          print *, "# velocities averaged over: ", nVels
-                          write(12, *) "# velocities averaged over: ", nVels
-                          print *, "Average velocity: ", vAvg
-                          write(12, *) "Average velocity: ", vAvg
-                          print *, "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
-                          write(12, *) "Particle path length: ", inventory(l)%elscatl * inventory(l)%steps
-                          print *, "O: ", O
-                          write(12, *) "O: ", O
-                          print *, "numSteps: ", numSteps
-                          write(12, *) "numSteps: ", numSteps
-                          print *, ""
-                        end if
-                      end if
-                    end if
-                  end if
-!
-!                  !$OMP END CRITICAL
-                matAveN(l) = matAveN(l) + PN
-                matAveM(l) = matAveM(l) + PM
-              end do mtrlLoop
-
-                PNvels = PNvels + PN
-                PMvels = PMvels + PM
-            end do velsLoop
-
-            matAveN = matAveN / nVels
-            matAveM = matAveM / nVels
+            ! Can this be made more abstract? As in, some common 
+            ! interface that will handle the passing of the variables,
+            ! but not using a COMMON block?
+            ! Lookup: interface, abstract interface, procedure,
+            !         function pointers
+            call main_vel_loop(inventory, rhoReset, rho, O, P, &
+              &vel_list, PNvels, PMvels, Dm, theta0, nMaterials,&
+              &nVels, header, N_initial, matAveN, matAveM, no_scattering)
             
             meshNavg(i, j) = PNvels / float(nVels)
             meshMavg(i, j) = PMvels / float(nVels)
@@ -350,7 +238,7 @@ matSteps:         do m = 1, numSteps
 
     ! Generate a random velocity list
     do k = 1, nVels
-      call YK_MAXW(temp, vel_list(k))
+      call neutron_MW_dist(temp, vel_list(k), 0., 7153.416954)
     end do
 
     open(unit = 1, file = trim(adjustl(directoryName)) &
@@ -379,17 +267,10 @@ matSteps:         do m = 1, numSteps
         write(unit = 3, fmt = 50) vel_list(i)
     end do
     close(unit = 3)
-
-    write(unit = 4, fmt = 54) trim(adjustl(header(1))), ",", 20., &
+  
+    !write(unit = 4, fmt = '(A32, )') asdf
+    write(unit = 4, fmt = 54) header(1), ",", 20., &
       &",", 1.0, ",", 0.0
-    do i = 1, nMaterials
-        write(unit = 4, fmt = 54) inventory(i)%matName, ",", inventory(i)%d, &
-          &",", matAveN(i), ",", matAveM(i)
-    end do
-    ! Since I'm basically making a csv, I know this can be done much more simply
-    write(unit = 4, fmt = '(A4, A1, ES17.8E3, A1, A5, A1, ES17.8E3)') "mass", ",", &
-      &masses(1), ",", "theta", ",", angles(1)
-    close(unit = 4)
 
     do i = 1, nMasses
         write(unit = 10, fmt = 52) meshNavg(i, :)
@@ -397,6 +278,122 @@ matSteps:         do m = 1, numSteps
     end do
     close(unit = 10)
     close(unit = 20)
+
+! === BEGIN JANK ===============================================================
+    ! Write a function that'll do this for all the desired 
+    ! For outputting the desired probabilities as a function of mass and angle
+    ! and material while stepping through the code 
+    i = 1
+    j = 1
+    Dm = Masses(i)
+    theta0 = Angles(j)
+    !call get_log_data(inventory, rhoReset, rho, O, P, &
+    !&vel_list, PNvels, PMvels, Dm, theta0, nMaterials, nVels, &
+    !&header, N_initial, matAveN, matAveM)
+    O = 0.
+    P = 0.
+    vAvg = vAvg + sum(vel_list)
+    vAvg = vAvg / nVels
+    
+    O       = 0.0
+    P       = 0.0
+    PN      = 1.0
+    PM      = 0.0
+    PNvels  = 0.0
+    PMvels  = 0.0
+
+vl: do k = 1, nVels
+      if (N_initial) then
+        PN = 1.0
+        PM = 0.0
+      else
+        PN = 0.0
+        PM = 1.0
+      end if
+
+      vel = vel_list(k)
+      rho = rhoReset
+
+nMat: do l = 1, nMaterials
+        matAveN(l) = 0.0
+        matAveM(l) = 0.0
+        matD = inventory(l)%d           ! m
+        numSteps = inventory(l)%steps   !
+        Vopt = inventory(l)%V           ! eV
+        Wabs = inventory(l)%Wabs        ! eV
+        elLambda = inventory(l)%elscatl ! m
+
+        remThick = matD
+        m = 1
+
+        if (N_initial) then
+          PN = 1.0
+          PM = 0.0
+        else
+          PN = 0.0
+          PM = 1.0
+        end if
+
+mStep:  do while(remThick .gt. 0)
+          rho = rhoReset
+          call scttStep(elLambda, remThick, dx)
+          tStep = dx / vel
+          call exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, tStep, rho)
+          O(1) = rho(1, 1)
+          O(2) = rho(1, 2)
+          O(3) = rho(2, 1)
+          O(4) = rho(2, 2)
+
+          if (l .eq. 1) then
+            if (N_initial) then
+              P(1) = PN * O(1)
+              P(2) = PN * O(2)
+              P(3) = 0.0
+              P(4) = 0.0
+            else
+              P(1) = 0.0
+              P(2) = 0.0
+              P(3) = PM * O(3)
+              P(4) = PM * O(4)
+            end if
+          end if
+
+          PN = P(1) + P(3)
+          PM = P(2) + P(4)
+
+          P(1) = PN * O(1)
+          P(2) = PN * O(2)
+          P(3) = PM * O(3)
+          P(4) = PM * O(4)
+
+          m = m + 1
+        end do mStep  ! matSteps
+
+        ! For later outputting the desired probabilities as a function of material
+        ! for a given mass and angle.
+        matAveN(l) = matAveN(l) + PN
+        matAveM(l) = matAveM(l) + PM
+        print *, matAveN(l), matAveM(l)
+      end do nMat     ! nMaterials
+
+      PNvels = PNvels + PN
+      PMvels = PMvels + PM
+    end do vl   ! nVels
+    matAveN = matAveN / nVels
+    matAveM = matAveM / nVels
+
+
+! === END JANK =================================================================
+    do i = 1, nMaterials
+        write(unit = 4, fmt = 54) inventory(i)%matName, ",", inventory(i)%d, &
+          &",", matAveN(i), ",", matAveM(i)
+    end do
+
+    ! Since I'm basically making a csv, I know this can be done much more simply
+    write(unit = 4, fmt = '(A4, A1, ES17.8E3, A1, A5, A1, ES17.8E3, A1, A5, A1, ES17.8E3)') &
+      &"mass", ",", Dm, ",", "theta", ",", theta0, ",", "vel", ",", vel_list(1)
+    close(unit = 4)
+
 
 50  format(ES17.8E3)
 51  format(A1, A15)

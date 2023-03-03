@@ -118,6 +118,7 @@ contains
     end subroutine YK_MAXW
 
     recursive subroutine neutron_MW_dist(temp, vel, min, max)
+    ! For 340 K, to cover 0.9999 of the CDF, set max = 7153.416954
       use constants
       implicit none
       ! neutron mass: 
@@ -142,7 +143,10 @@ contains
       do while (reject .gt. prob)
         call random_number(rand)
         vel = max * rand
-
+        do while (100. * vel .gt. 100. * max)
+          call random_number(rand)
+          vel = max * rand
+        end do
 !        do while (vel .le. min)
 !          call random_number(rand)
 !          vel = max * rand

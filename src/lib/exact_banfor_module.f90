@@ -1,19 +1,24 @@
 module exact_banfor_module
 contains
     recursive subroutine exactBanfor(Dm, vel, theta0, Vopt, Wsc, Wabs, tStep, rho)
+    !recursive subroutine exactBanfor(Dm, vel, theta0, omega0, Vopt, &
+    !  &Wsc, Wabs, tSTep, rho)
         implicit none
+        complex, parameter  :: i = cmplx(0.0, 1.0)
+        real, parameter :: hbar = 6.582119569E-16
         ! Input argument declarations
         real    Dm, vel, theta0, Vopt, Wsc, Wabs, tStep
         complex, dimension(2, 2)  :: s
         real, dimension(2, 2)     :: rho
         
         ! Required variable declarations - not from invocation
-        real        hbar, TOF, time, eps   
+        real        TOF, time, eps   
         real        V, W, U1, U2, WW1, WW2, DE
+        !real    :: omega0 ! Should be input argument like theta0
 !        real        unitar
 !        real        lambda, A, B, nmass, Qe, theta, omega
 !        complex     s2ze, D, arg2
-        complex     i, zeta, zeta2, arg, cze, cze2, sze, sze2, H1, H2
+        complex     zeta, zeta2, arg, cze, cze2, sze, sze2, H1, H2
         complex     czestar, szestar, cze2star, sze2star, uroo, roo             
         complex     H1C, H2C
         complex     aee1, aee2, ee1, ee2, ee1C, ee2C
@@ -31,10 +36,8 @@ contains
 
         ! Maximum angle possible - 45 degrees
         if (theta0 .ge. 0.785398163) theta0 = 0.785398163
-        hbar = 6.582119569E-16
 
         V       = Vopt - Dm
-        i       = cmplx(0.0, 1.0)
         W       = Wabs + vel * Wsc
         eps     = 0.5 * abs(Dm) * tan(2. * theta0)
         arg     = 2. * eps / (V - i*W)
@@ -79,18 +82,11 @@ contains
         s(1, 2) = cze * sze * (ee1 - ee2)
         s(2, 1) = cze * sze * (ee1 - ee2)
         
-        !psi = matmul(s, psi)
-
-        !rho(1, 1) = real(psi(1) * conjg(psi(1)))
-        !rho(2, 2) = real(psi(2) * conjg(psi(2)))
-        !rho(1, 2) = real(psi(1) * conjg(psi(2)))
-        !rho(2, 1) = real(psi(2) * conjg(psi(1)))
         rho(1, 1) = real(s(1, 1) * conjg(s(1, 1)))
         rho(1, 2) = real(s(1, 2) * conjg(s(2, 1)))
         rho(2, 1) = real(s(2, 1) * conjg(s(1, 2)))
         rho(2, 2) = real(s(2, 2) * conjg(s(2, 2)))
 
-        !print *, "rho = ", rho
         return 
     end subroutine exactBanfor
 end module exact_banfor_module

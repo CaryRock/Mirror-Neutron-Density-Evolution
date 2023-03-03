@@ -7,7 +7,8 @@ lib	:=build/$(D)/lib.a
 
 # === MANUAL ===================================================================
 ug_obj  = $(patsubst %.f90, %.o, $(lib_src))
-DFLAGS = -march=x86-64 -g -cpp -Wall -Wextra -fbacktrace -fcheck=all -pedantic -fimplicit-none -fdefault-real-8 -fopenmp
+DFLAGS := -march=x86-64 -O3 -cpp -Wall -Wextra -fbacktrace -fcheck=all -pedantic 
+DFLAGS := $(DFLAGS) -fimplicit-none -fdefault-real-8 -fopenmp
 
 all: $(ug_obj)
 
@@ -15,7 +16,7 @@ $(ug_obj): $(patsubst %.o, %.f90, $@)
 	gfortran $(DFLAGS) -g $(patsubst %.o, %.f90, $@) -c
 
 clean:
-	rm *.o *.mod
+	rm -f *.o *.mod
 # === MANUAL ===================================================================	
 
 lib: $(lib)
